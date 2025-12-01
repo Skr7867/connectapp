@@ -9,19 +9,17 @@ class BuyPlanButton extends StatelessWidget {
   final String planId;
   final int coinsRequired;
 
-  const BuyPlanButton({
+  BuyPlanButton({
     super.key,
     required this.planId,
     required this.coinsRequired,
   });
+  final PlanPurchaseController controller = Get.find<PlanPurchaseController>();
+  final UserProfileController userProfileController =
+      Get.find<UserProfileController>();
 
   @override
   Widget build(BuildContext context) {
-    final PlanPurchaseController controller =
-        Get.find<PlanPurchaseController>();
-    final UserProfileController userProfileController =
-        Get.find<UserProfileController>();
-
     return Obx(() {
       final isPaying = controller.isPaying[planId] ?? false;
       final isPurchased = controller.purchasedPlans.contains(planId);
@@ -67,7 +65,7 @@ class BuyPlanButton extends StatelessWidget {
                   style: TextStyle(
                     color: AppColors.whiteColor,
                     fontFamily: AppFonts.opensansRegular,
-                    fontSize: 16,
+                    fontSize: 13,
                     fontWeight: FontWeight.bold,
                   ),
                 ),

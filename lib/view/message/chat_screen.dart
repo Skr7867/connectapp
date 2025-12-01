@@ -8631,7 +8631,6 @@ class _ChatScreenState extends State<ChatScreen>
     }
 
     isGroup = chat?.isGroup ?? false;
-
     return Stack(
       children: [
         Column(
@@ -8708,6 +8707,15 @@ class _ChatScreenState extends State<ChatScreen>
                                       ?.color,
                                 ),
                               ),
+                              if (chat.isGroup != true)
+                                Text(
+                                  'last seen today at 10:45 AM',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontFamily: AppFonts.opensansRegular,
+                                    color: Colors.grey,
+                                  ),
+                                ),
                               if (chat.isGroup == true)
                                 Text(
                                   '${chat.participants?.length ?? 0} members',
@@ -8745,15 +8753,37 @@ class _ChatScreenState extends State<ChatScreen>
                       onSelected: _handleGroupMenuAction,
                       itemBuilder: (context) => [
                         const PopupMenuItem(
-                            value: 'info', child: Text('Group Info')),
+                            value: 'info',
+                            child: Text(
+                              'Group Info',
+                              style: TextStyle(
+                                  fontFamily: AppFonts.opensansRegular),
+                            )),
                         if (isAdmin) ...[
                           const PopupMenuItem(
-                              value: 'edit', child: Text('Edit Group')),
+                            value: 'edit',
+                            child: Text(
+                              'Edit Group',
+                              style: TextStyle(
+                                  fontFamily: AppFonts.opensansRegular),
+                            ),
+                          ),
                           const PopupMenuItem(
-                              value: 'delete', child: Text('Delete Group')),
+                            value: 'delete',
+                            child: Text(
+                              'Delete Group',
+                              style: TextStyle(
+                                  fontFamily: AppFonts.opensansRegular),
+                            ),
+                          ),
                         ],
-                        const PopupMenuItem(
-                            value: 'leave', child: Text('Leave Group')),
+                        PopupMenuItem(
+                            value: 'leave',
+                            child: Text(
+                              'Leave Group',
+                              style: TextStyle(
+                                  fontFamily: AppFonts.opensansRegular),
+                            )),
                       ],
                     ),
                 ],
@@ -8820,7 +8850,7 @@ class _ChatScreenState extends State<ChatScreen>
                       padding: const EdgeInsets.all(16),
                       itemCount: displayMessages.length + 1,
                       itemBuilder: (context, index) {
-                        // ✅ SHOW ENCRYPTION NOTICE as first item
+                        //  SHOW ENCRYPTION NOTICE as first item
                         if (index == 0) {
                           return EncryptionNotice();
                         }

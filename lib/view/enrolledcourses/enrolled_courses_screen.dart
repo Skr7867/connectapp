@@ -210,7 +210,7 @@ class EnrolledCoursesScreen extends StatelessWidget {
                         crossAxisCount: screenWidth > 600 ? 3 : 2,
                         crossAxisSpacing: 16,
                         mainAxisSpacing: 16,
-                        childAspectRatio: 0.59,
+                        childAspectRatio: 0.57,
                       ),
                       itemCount: courses.length,
                       itemBuilder: (context, index) {
@@ -509,7 +509,7 @@ class EnrolledCoursesScreen extends StatelessWidget {
                                                   ),
                                                 ],
                                               ),
-                                              const SizedBox(height: 6),
+                                              const SizedBox(height: 2),
                                               ClipRRect(
                                                 borderRadius:
                                                     BorderRadius.circular(8),

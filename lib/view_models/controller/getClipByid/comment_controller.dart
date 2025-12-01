@@ -16,6 +16,15 @@ class CommentsController extends GetxController {
   var commentTranslated = <String, bool>{}.obs;
   var commentTranslatedTexts = <String, String>{}.obs;
   var commentTranslating = <String, bool>{}.obs;
+  var likedComments = <String, bool>{}.obs;
+  var likeCount = <String, int>{}.obs;
+
+  void toggleLike(String commentId, int oldCount) {
+    bool isLiked = likedComments[commentId] ?? false;
+
+    likedComments[commentId] = !isLiked;
+    likeCount[commentId] = isLiked ? oldCount : oldCount + 1;
+  }
 
   bool isCommentTranslated(String commentId) =>
       commentTranslated[commentId] ?? false;

@@ -9,6 +9,9 @@ class EncryptionNotice extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 24),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
+        border: Border.all(
+          color: const Color.fromARGB(255, 216, 203, 89).withOpacity(0.5),
+        ),
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(

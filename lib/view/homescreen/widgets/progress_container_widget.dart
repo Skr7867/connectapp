@@ -29,7 +29,7 @@ class DashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final userLeaderboardData = Get.put(UserLeaderboardController());
     return SizedBox(
-      height: 360,
+      height: MediaQuery.of(context).size.height * 0.38,
       child: GridView.builder(
         physics: BouncingScrollPhysics(),
         itemCount: items.length,

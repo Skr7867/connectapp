@@ -59,7 +59,7 @@ class UserProfileContainerWidget extends StatelessWidget {
                 SizedBox(height: size.height * 0.03),
 
                 // Stats Row
-                _buildStatsRow(userData, size, isSmallScreen),
+                _buildStatsRow(userData, size, isSmallScreen, context),
                 SizedBox(height: size.height * 0.03),
 
                 // Action Buttons
@@ -208,8 +208,8 @@ class UserProfileContainerWidget extends StatelessWidget {
       }
 
       final isActive = userData.userList.value.subscription?.status == "Active";
-      // final premiumIconUrl =
-      //     userData.userList.value.subscriptionFeatures?.premiumIconUrl;
+      final premiumIconUrl =
+          userData.userList.value.subscriptionFeatures?.premiumIconUrl;
 
       return Container(
         padding: EdgeInsets.symmetric(
@@ -248,30 +248,32 @@ class UserProfileContainerWidget extends StatelessWidget {
                 color: isActive ? Colors.black87 : AppColors.redColor,
               ),
             ),
-            // if (isActive && premiumIconUrl != null && premiumIconUrl.isNotEmpty)
-            //   Padding(
-            //     padding: const EdgeInsets.only(left: 6),
-            //     child: CachedNetworkImage(
-            //       imageUrl: premiumIconUrl,
-            //       width: 20,
-            //       height: 20,
-            //       fit: BoxFit.contain,
-            //       placeholder: (context, url) => const SizedBox(
-            //         width: 20,
-            //         height: 20,
-            //         child: CircularProgressIndicator(strokeWidth: 1),
-            //       ),
-            //       errorWidget: (context, url, error) => const SizedBox.shrink(),
-            //     ),
-            //   ),
+            if (isActive && premiumIconUrl != null && premiumIconUrl.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(left: 6),
+                child: CachedNetworkImage(
+                  imageUrl: premiumIconUrl,
+                  width: 20,
+                  height: 20,
+                  fit: BoxFit.contain,
+                  placeholder: (context, url) => const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      color: Colors.yellow,
+                    ),
+                  ),
+                  errorWidget: (context, url, error) => const SizedBox.shrink(),
+                ),
+              ),
           ],
         ),
       );
     });
   }
 
-  Widget _buildStatsRow(
-      UserProfileController userData, Size size, bool isSmallScreen) {
+  Widget _buildStatsRow(UserProfileController userData, Size size,
+      bool isSmallScreen, BuildContext context) {
     return Obx(() {
       final profile = userData.userList.value;
       final isLoading = userData.rxRequestStatus.value == Status.LOADING;
@@ -292,33 +294,33 @@ class UserProfileContainerWidget extends StatelessWidget {
         alignment: WrapAlignment.center,
         children: [
           _buildStatCard("${profile.totalPost ?? 0}", "Clips",
-              Icons.video_library_rounded, null),
+              Icons.video_library_rounded, null, context),
           _buildStatCard(
-            "${profile.followerCount ?? 0}",
-            "Followers",
-            Icons.people_rounded,
-            () => Get.toNamed(RouteName.allFollowersScreen),
-          ),
+              "${profile.followerCount ?? 0}",
+              "Followers",
+              Icons.people_rounded,
+              () => Get.toNamed(RouteName.allFollowersScreen),
+              context),
           _buildStatCard(
-            "${profile.followingCount ?? 0}",
-            "Following",
-            Icons.person_add_rounded,
-            () => Get.toNamed(RouteName.allFollowersScreen),
-          ),
+              "${profile.followingCount ?? 0}",
+              "Following",
+              Icons.person_add_rounded,
+              () => Get.toNamed(RouteName.allFollowersScreen),
+              context),
           _buildStatCard("${profile.totalLikes ?? 0}", "Likes",
-              Icons.favorite_rounded, null),
+              Icons.favorite_rounded, null, context),
         ],
       );
     });
   }
 
-  Widget _buildStatCard(
-      String value, String label, IconData icon, VoidCallback? onTap) {
+  Widget _buildStatCard(String value, String label, IconData icon,
+      VoidCallback? onTap, BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 75,
-        height: 85,
+        width: MediaQuery.of(context).size.width * 0.2,
+        height: MediaQuery.of(context).size.height * 0.1,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
@@ -406,9 +408,10 @@ class UserProfileContainerWidget extends StatelessWidget {
       onTap: () => Get.toNamed(route),
       borderRadius: BorderRadius.circular(12),
       child: Container(
+        margin: EdgeInsets.symmetric(horizontal: 2),
         padding: EdgeInsets.symmetric(
-          horizontal: isSmallScreen ? 12 : 16,
-          vertical: 12,
+          horizontal: isSmallScreen ? 1 : 16,
+          vertical: 7,
         ),
         decoration: BoxDecoration(
           gradient: AppColors.primaryGradient,
@@ -424,12 +427,12 @@ class UserProfileContainerWidget extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: AppColors.whiteColor, size: 18),
-            const SizedBox(width: 6),
+            Icon(icon, color: AppColors.whiteColor, size: 12),
+            const SizedBox(width: 4),
             Text(
               label,
               style: TextStyle(
-                fontSize: isSmallScreen ? 13 : 14,
+                fontSize: isSmallScreen ? 10 : 12,
                 fontFamily: AppFonts.opensansRegular,
                 fontWeight: FontWeight.w600,
                 color: AppColors.whiteColor,

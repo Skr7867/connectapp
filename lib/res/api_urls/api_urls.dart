@@ -138,6 +138,8 @@ class ApiUrls {
 
   static const String deleteAvatarsCollectionApi =
       '$baseUrl/connect/v1/api/custom-avatar/delete-collection';
+  static const String deleteAvatarsCommentApi =
+      '$baseUrl/connect/v1/api/social/clip/comment/delete';
 
   static const String popularCourseApi =
       '$baseUrl/connect/v1/api/user/get-top-courses';

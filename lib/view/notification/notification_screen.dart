@@ -166,13 +166,13 @@ class NotificationScreen extends StatelessWidget {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  SizedBox(width: screenWidht * 0.06),
+                                  SizedBox(width: screenWidht * 0.03),
                                   _buildTab(
                                     label: 'all_12'.tr,
                                     isSelected: selectedFilter.value == 'all',
                                     onTap: () => selectedFilter.value = 'all',
                                   ),
-                                  SizedBox(width: screenWidht * 0.1),
+                                  Spacer(),
                                   _buildTab(
                                     label: 'unread'.tr,
                                     isSelected:
