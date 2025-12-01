@@ -1,0 +1,66 @@
+# Flutter/Dart/Pub related
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+flutter_*.png
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+
+# macOS
+*.xcworkspace
+*.xcuserstate
+*.xcuserdata
+*.DS_Store
+
+# iOS
+Pods/
+DerivedData/
+Flutter/Flutter.framework/
+Flutter/Flutter.podspec
+*.lock
+
+# Android Gradle
+.gradle/
+android/.gradle/
+android/app/build/
+*.keystore
+
+# Web
+build/web/
+
+# Linux
+linux/flutter/ephemeral/
+
+# Windows
+windows/flutter/ephemeral/
+
+# macOS
+macos/Flutter/ephemeral/
+
+# Coverage
+coverage/
+
+# Misc
+*.log
+*.tmp
+*.temp
+
+# Node
+node_modules/
+
+# Generated Plugin Registrant
+GeneratedPluginRegistrant.*
+
+# Firebase crashlytics
+firebase_app_id_file.json
+
+windows/
+linux/
+.flutter-plugins
+.flutter-plugins-dependencies
+android/local.properties

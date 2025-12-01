@@ -1,0 +1,52 @@
+class ImageAssets {
+  static const String earningLogo = 'assets/images/Earnings.png';
+  static const String profilePic = 'assets/images/ProfilePic.png';
+  static const String courseIcon = 'assets/icons/course.png';
+  static const String home = 'assets/icons/home.png';
+  static const String notification = 'assets/icons/notification.png';
+  static const String msg = 'assets/icons/msg.png';
+  static const String settings = 'assets/icons/settings.png';
+  static const String trading = 'assets/images/trading.jpg';
+  static const String profileIcon = 'assets/icons/profile.png';
+  static const String membershipIcon = 'assets/icons/membership.png';
+  static const String missionIcon = 'assets/icons/misson.png';
+  static const String rewardIcon = 'assets/icons/award.png';
+  static const String languageIcon = 'assets/icons/themes.png';
+  static const String themeIcon = 'assets/icons/language.png';
+  static const String logOutIcon = 'assets/icons/logout.png';
+  static const String meetingIcon = 'assets/icons/meetings.png';
+  static const String pythonIcon = 'assets/images/python.png';
+  static const String javaIcon = 'assets/images/java.png';
+  static const String webIcon = 'assets/images/webdesign.png';
+  static const String meetingbg = 'assets/images/meetingbg.png';
+  static const String splashLogo = 'assets/images/splash.png';
+  static const String progressIcon = 'assets/icons/progress.png';
+  static const String starIcon = 'assets/icons/star.png';
+  static const String xpIcon = 'assets/icons/flash.png';
+  static const String streakIcon = 'assets/icons/natural-gas.png';
+  static const String rocketIcon = 'assets/icons/rocket.png';
+  static const String brainIcon = 'assets/icons/brain.png';
+  static const String chatsIcon = 'assets/icons/chat.png';
+  static const String spacesIcon = 'assets/icons/spaces.png';
+  static const String rankingIcon = 'assets/icons/ranking.png';
+  static const String chatIcon = 'assets/icons/chat(1).png';
+  static const String spaceIcon = 'assets/icons/display.png';
+  static const String bgImg = 'assets/images/connectloginbg.jpg';
+  static const String googlePay = 'assets/icons/googlepay.png';
+  static const String google = 'assets/icons/google.png';
+  static const String googleSvg = 'assets/icons/googlesvg.svg';
+
+  //**********************************new design images***************************************/
+  static const String signupImg = 'assets/images/signup.png';
+  static const String defaultProfileImg = 'assets/images/defaultPofileImg.png';
+  static const String signinImg = 'assets/images/signin.png';
+  static const String xIcon = 'assets/icons/xicon.png';
+  static const String lockIcon = 'assets/images/passwordLock.png';
+  static const String telescope = 'assets/images/telescope.png';
+  static const String openbook = 'assets/images/openbook.png';
+  static const String twitterIcon = 'assets/images/twitter.png';
+  static const String linkedin = 'assets/images/linkedin.png';
+  static const String website = 'assets/images/website.png';
+  static const String instagram = 'assets/images/instagram.png';
+  static const String coins = 'assets/icons/coins.png';
+}
