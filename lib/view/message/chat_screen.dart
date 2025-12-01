@@ -2734,53 +2734,47 @@ class _ChatScreenState extends State<ChatScreen>
                             children: [
                               // In your _buildMessageBubble method, replace the reply preview section with:
                               if (message.replyTo != null) ...[
-                                GestureDetector(
-                                  onTap: () {
-                                    _scrollToReplyMessage(message.replyTo!.id);
-                                  },
-                                  child: Container(
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.fromLTRB(
-                                        16, 12, 16, 8),
-                                    decoration: BoxDecoration(
-                                      color: isMe
-                                          ? Colors.grey[100]
-                                          : Colors.white.withOpacity(0.1),
-                                      borderRadius: const BorderRadius.only(
-                                        topLeft: Radius.circular(16),
-                                        topRight: Radius.circular(16),
-                                      ),
-                                      border: Border(
-                                        left: BorderSide(
-                                          color:
-                                              isMe ? Colors.blue : Colors.white,
-                                          width: 3,
-                                        ),
+                                Container(
+                                  width: double.infinity,
+                                  padding:
+                                      const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                                  decoration: BoxDecoration(
+                                    color: isMe
+                                        ? Colors.grey[100]
+                                        : Colors.white.withOpacity(0.1),
+                                    borderRadius: const BorderRadius.only(
+                                      topLeft: Radius.circular(16),
+                                      topRight: Radius.circular(16),
+                                    ),
+                                    border: Border(
+                                      left: BorderSide(
+                                        color:
+                                            isMe ? Colors.blue : Colors.white,
+                                        width: 3,
                                       ),
                                     ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          message.replyTo!.sender?.name ??
-                                              'Unknown',
-                                          style: TextStyle(
-                                            fontFamily:
-                                                AppFonts.opensansRegular,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                            color: isMe
-                                                ? Colors.blue[700]
-                                                : Colors.white.withOpacity(0.9),
-                                          ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        message.replyTo!.sender?.name ??
+                                            'Unknown',
+                                        style: TextStyle(
+                                          fontFamily: AppFonts.opensansRegular,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: isMe
+                                              ? Colors.blue[700]
+                                              : Colors.white.withOpacity(0.9),
                                         ),
-                                        const SizedBox(height: 2),
-                                        // Use the same preview logic for consistency
-                                        _buildReplyContentPreview(
-                                            message.replyTo!, isMe),
-                                      ],
-                                    ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      // Use the same preview logic for consistency
+                                      _buildReplyContentPreview(
+                                          message.replyTo!),
+                                    ],
                                   ),
                                 ),
                               ],
@@ -3040,312 +3034,77 @@ class _ChatScreenState extends State<ChatScreen>
     );
   }
 
-  // Widget _buildReplyContentPreview(ReplyTo replyTo) {
-  //   // Extract content and type from replyTo
-  //   final content = replyTo.content ?? '';
-  //   final senderName = replyTo.sender?.name ?? 'Unknown';
-
-  //   // Simple detection based on content patterns
-  //   if (content.contains('/sticker/') || content.contains('sticker')) {
-  //     return Row(
-  //       children: [
-  //         Icon(Icons.emoji_emotions, size: 14, color: Colors.grey),
-  //         SizedBox(width: 4),
-  //         Text('Sticker', style: TextStyle(fontSize: 11, color: Colors.grey)),
-  //       ],
-  //     );
-  //   } else if (content.contains('/image/') ||
-  //       content.contains('.jpg') ||
-  //       content.contains('.png') ||
-  //       content.contains('.jpeg')) {
-  //     return Row(
-  //       children: [
-  //         Image.network(
-  //           content,
-  //           fit: BoxFit.contain,
-  //           height: 80,
-  //           width: 80,
-  //         ),
-  //       ],
-  //     );
-  //   } else if (content.contains('/video/') ||
-  //       content.contains('.mp4') ||
-  //       content.contains('.mov')) {
-  //     return Row(
-  //       children: [
-  //         Icon(Icons.videocam, size: 14, color: Colors.grey),
-  //         SizedBox(width: 4),
-  //         Text('Video', style: TextStyle(fontSize: 11, color: Colors.grey)),
-  //       ],
-  //     );
-  //   } else if (content.contains('/video/') ||
-  //       content.contains('.mp4') ||
-  //       content.contains('.mov')) {
-  //     return Row(
-  //       children: [
-  //         Icon(Icons.videocam, size: 14, color: Colors.grey),
-  //         SizedBox(width: 4),
-  //         Text('Video', style: TextStyle(fontSize: 11, color: Colors.grey)),
-  //       ],
-  //     );
-  //   } else if (content.contains('/pdf/') ||
-  //       content.contains('.pdf') ||
-  //       content.contains('.doc') ||
-  //       content.contains('.zip')) {
-  //     return Row(
-  //       children: [
-  //         Icon(Icons.picture_as_pdf, size: 14, color: Colors.grey),
-  //         SizedBox(width: 4),
-  //         Text('Pdf File', style: TextStyle(fontSize: 11, color: Colors.grey)),
-  //       ],
-  //     );
-  //   } else {
-  //     // For text messages, show the actual content
-  //     return Text(
-  //       content,
-  //       style: TextStyle(
-  //         fontSize: 11,
-  //         color: Colors.grey,
-  //       ),
-  //       maxLines: 2,
-  //       overflow: TextOverflow.ellipsis,
-  //     );
-  //   }
-  // }
-
-  Widget _buildReplyContentPreview(ReplyTo replyTo, bool isMe) {
+  Widget _buildReplyContentPreview(ReplyTo replyTo) {
+    // Extract content and type from replyTo
     final content = replyTo.content ?? '';
     final senderName = replyTo.sender?.name ?? 'Unknown';
 
-    return GestureDetector(
-      onTap: () {
-        // When user taps on reply preview, scroll to original message
-        _scrollToReplyMessage(replyTo.id);
-      },
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: isMe ? Colors.grey[100] : Colors.white.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
-          border: Border(
-            left: BorderSide(
-              color: isMe ? Colors.blue : Colors.white,
-              width: 3,
-            ),
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.reply,
-                  size: 12,
-                  color:
-                      isMe ? Colors.blue[700] : Colors.white.withOpacity(0.9),
-                ),
-                SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    senderName,
-                    style: TextStyle(
-                      fontFamily: AppFonts.opensansRegular,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: isMe
-                          ? Colors.blue[700]
-                          : Colors.white.withOpacity(0.9),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            _buildReplyPreviewContent(content, isMe),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _scrollToReplyMessage(String? replyMessageId) {
-    if (replyMessageId == null || replyMessageId.isEmpty) {
-      _showErrorSnackBar('Reply message not found');
-      return;
-    }
-
-    final chatMessages = messages[selectedChatId] ?? [];
-
-    // Find the original message that was replied to
-    int messageIndex = -1;
-    for (int i = 0; i < chatMessages.length; i++) {
-      final msgId = _getMessageId(chatMessages[i]);
-      if (msgId == replyMessageId) {
-        messageIndex = i;
-        break;
-      }
-    }
-
-    if (messageIndex == -1) {
-      _showErrorSnackBar('Original message not found');
-      return;
-    }
-
-    // Highlight the replied message
-    setState(() {
-      _highlightedMessageId = replyMessageId;
-    });
-
-    // Scroll to the message
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        // Calculate approximate position
-        final itemHeight = 100.0; // Average message height
-        final targetOffset = (messageIndex * itemHeight).clamp(
-          0.0,
-          _scrollController.position.maxScrollExtent,
-        );
-
-        _scrollController.animateTo(
-          targetOffset,
-          duration: const Duration(milliseconds: 500),
-          curve: Curves.easeInOut,
-        );
-      }
-
-      // Try using GlobalKey if available
-      final key = _messageKeys[replyMessageId];
-      if (key != null && key.currentContext != null) {
-        Scrollable.ensureVisible(
-          key.currentContext!,
-          duration: const Duration(milliseconds: 500),
-          curve: Curves.easeInOut,
-          alignment: 0.2, // Show message at 20% from top
-        );
-      }
-
-      // Remove highlight after 3 seconds
-      _highlightTimer?.cancel();
-      _highlightTimer = Timer(const Duration(seconds: 3), () {
-        if (mounted) {
-          setState(() {
-            _highlightedMessageId = null;
-          });
-        }
-      });
-    });
-  }
-
-// Helper method to show reply content preview
-  Widget _buildReplyPreviewContent(String content, bool isMe) {
-    // Check if it's a file/media by URL patterns
-    final isImage = content.contains('.jpg') ||
-        content.contains('.jpeg') ||
+    // Simple detection based on content patterns
+    if (content.contains('/sticker/') || content.contains('sticker')) {
+      return Row(
+        children: [
+          Icon(Icons.emoji_emotions, size: 14, color: Colors.grey),
+          SizedBox(width: 4),
+          Text('Sticker', style: TextStyle(fontSize: 11, color: Colors.grey)),
+        ],
+      );
+    } else if (content.contains('/image/') ||
+        content.contains('.jpg') ||
         content.contains('.png') ||
-        content.contains('/image/');
-
-    final isVideo = content.contains('.mp4') ||
-        content.contains('.mov') ||
-        content.contains('/video/');
-
-    final isAudio = content.contains('.mp3') ||
-        content.contains('.wav') ||
-        content.contains('/audio/');
-
-    final isPdf = content.contains('.pdf') || content.contains('/pdf/');
-
-    if (isImage) {
+        content.contains('.jpeg')) {
       return Row(
         children: [
-          Icon(
-            Icons.image,
-            size: 14,
-            color: isMe ? Colors.grey[600] : Colors.white.withOpacity(0.7),
-          ),
-          SizedBox(width: 4),
-          Text(
-            'Photo',
-            style: TextStyle(
-              fontSize: 11,
-              color: isMe ? Colors.grey[600] : Colors.white.withOpacity(0.7),
-              fontFamily: AppFonts.opensansRegular,
-            ),
+          Image.network(
+            content,
+            fit: BoxFit.contain,
+            height: 80,
+            width: 80,
           ),
         ],
       );
-    } else if (isVideo) {
+    } else if (content.contains('/video/') ||
+        content.contains('.mp4') ||
+        content.contains('.mov')) {
       return Row(
         children: [
-          Icon(
-            Icons.videocam,
-            size: 14,
-            color: isMe ? Colors.grey[600] : Colors.white.withOpacity(0.7),
-          ),
+          Icon(Icons.videocam, size: 14, color: Colors.grey),
           SizedBox(width: 4),
-          Text(
-            'Video',
-            style: TextStyle(
-              fontSize: 11,
-              color: isMe ? Colors.grey[600] : Colors.white.withOpacity(0.7),
-              fontFamily: AppFonts.opensansRegular,
-            ),
-          ),
+          Text('Video', style: TextStyle(fontSize: 11, color: Colors.grey)),
         ],
       );
-    } else if (isAudio) {
+    } else if (content.contains('/video/') ||
+        content.contains('.mp4') ||
+        content.contains('.mov')) {
       return Row(
         children: [
-          Icon(
-            Icons.audiotrack,
-            size: 14,
-            color: isMe ? Colors.grey[600] : Colors.white.withOpacity(0.7),
-          ),
+          Icon(Icons.videocam, size: 14, color: Colors.grey),
           SizedBox(width: 4),
-          Text(
-            'Audio',
-            style: TextStyle(
-              fontSize: 11,
-              color: isMe ? Colors.grey[600] : Colors.white.withOpacity(0.7),
-              fontFamily: AppFonts.opensansRegular,
-            ),
-          ),
+          Text('Video', style: TextStyle(fontSize: 11, color: Colors.grey)),
         ],
       );
-    } else if (isPdf) {
+    } else if (content.contains('/pdf/') ||
+        content.contains('.pdf') ||
+        content.contains('.doc') ||
+        content.contains('.zip')) {
       return Row(
         children: [
-          Icon(
-            Icons.picture_as_pdf,
-            size: 14,
-            color: isMe ? Colors.grey[600] : Colors.white.withOpacity(0.7),
-          ),
+          Icon(Icons.picture_as_pdf, size: 14, color: Colors.grey),
           SizedBox(width: 4),
-          Text(
-            'PDF',
-            style: TextStyle(
-              fontSize: 11,
-              color: isMe ? Colors.grey[600] : Colors.white.withOpacity(0.7),
-              fontFamily: AppFonts.opensansRegular,
-            ),
-          ),
+          Text('Pdf File', style: TextStyle(fontSize: 11, color: Colors.grey)),
         ],
+      );
+    } else {
+      // For text messages, show the actual content
+      return Text(
+        content,
+        style: TextStyle(
+          fontSize: 11,
+          color: Colors.grey,
+        ),
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
       );
     }
-
-    // Default: show text content
-    return Text(
-      content,
-      style: TextStyle(
-        fontSize: 11,
-        color: isMe ? Colors.grey[600] : Colors.white.withOpacity(0.7),
-        fontFamily: AppFonts.opensansRegular,
-      ),
-      maxLines: 2,
-      overflow: TextOverflow.ellipsis,
-    );
   }
 
   Widget _buildMessageContent(String content, {Color? textColor}) {
@@ -8489,80 +8248,58 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   Widget _buildReplyPreview() {
-    return GestureDetector(
-      onTap: () {
-        // When user taps on input's reply preview, scroll to original message
-        if (replyingToMessage != null) {
-          _scrollToReplyMessage(replyingToMessage!.id);
-        }
-      },
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        margin: const EdgeInsets.only(bottom: 8),
-        decoration: BoxDecoration(
-          color: Colors.blue.shade50,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.blue.shade300, width: 2),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 4,
-              height: 40,
-              decoration: BoxDecoration(
-                color: Colors.blue,
-                borderRadius: BorderRadius.circular(2),
-              ),
+    return Container(
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 4,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.blue,
+              borderRadius: BorderRadius.circular(2),
             ),
-            const SizedBox(width: 12),
-            const Icon(Icons.reply, size: 16, color: Colors.blue),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Replying to ${replyingToMessage!.sender.name}',
-                    style: TextStyle(
+          ),
+          const SizedBox(width: 12),
+          const Icon(Icons.reply, size: 16, color: Colors.grey),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Replying to ${replyingToMessage!.sender.name}',
+                  style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: Colors.blue.shade900,
-                      fontFamily: AppFonts.opensansRegular,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  _buildReplyPreviews(replyingToMessage!),
-                ],
-              ),
-            ),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.arrow_upward,
-                  size: 14,
-                  color: Colors.blue.shade700,
+                      color: Colors.blue,
+                      fontFamily: AppFonts.opensansRegular),
                 ),
-                SizedBox(width: 4),
-                Text(
-                  'Tap to view',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: Colors.blue.shade700,
-                    fontFamily: AppFonts.opensansRegular,
-                  ),
-                ),
+                const SizedBox(height: 2),
+                // Text(
+                //   replyingToMessage!.content,
+                //   style: const TextStyle(fontSize: 12, color: Colors.grey),
+                //   maxLines: 2,
+                //   overflow: TextOverflow.ellipsis,
+                // ),
+
+                _buildReplyPreviews(replyingToMessage!),
               ],
             ),
-            SizedBox(width: 8),
-            IconButton(
-              onPressed: _cancelReply,
-              icon: Icon(Icons.close, size: 16, color: Colors.blue.shade700),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-            ),
-          ],
-        ),
+          ),
+          IconButton(
+            onPressed: _cancelReply,
+            icon: const Icon(Icons.close, size: 16, color: Colors.grey),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
+        ],
       ),
     );
   }
@@ -9646,21 +9383,9 @@ class _ChatScreenState extends State<ChatScreen>
                 duration: const Duration(milliseconds: 300),
                 decoration: BoxDecoration(
                   color: isHighlighted
-                      ? Colors.amber.withOpacity(0.3) // Yellow highlight
+                      ? Colors.yellow.withOpacity(0.3)
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
-                  border: isHighlighted
-                      ? Border.all(color: Colors.amber.shade600, width: 2)
-                      : null,
-                  boxShadow: isHighlighted
-                      ? [
-                          BoxShadow(
-                            color: Colors.amber.withOpacity(0.3),
-                            blurRadius: 8,
-                            spreadRadius: 2,
-                          ),
-                        ]
-                      : null,
                 ),
                 padding: isHighlighted
                     ? const EdgeInsets.symmetric(horizontal: 8, vertical: 4)
