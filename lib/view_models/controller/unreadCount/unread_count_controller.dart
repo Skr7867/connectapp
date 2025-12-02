@@ -33,7 +33,6 @@ class UnreadCountController extends GetxController {
     if (token == null) return;
 
     unreadCountList.value = await _repository.fetchUnreadCount(token);
-    log("📥 Loaded unread counts from API: ${unreadCountList.length}");
   }
 
   // ---- SOCKET UPDATE FROM SERVER ----

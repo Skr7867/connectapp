@@ -1,7 +1,7 @@
 class UnreadCountModel {
   final String? sId;
   final List<Participants>? participants;
-  int? unreadCount;
+  final int? unreadCount;
   final List<dynamic>? pinnedMessages;
   final String? createdAt;
   final String? updatedAt;
@@ -17,7 +17,7 @@ class UnreadCountModel {
     this.lastMessage,
   });
 
-  // ✅ ADD: copyWith method for immutable updates
+  // ✅ copyWith
   UnreadCountModel copyWith({
     String? sId,
     List<Participants>? participants,
@@ -38,53 +38,43 @@ class UnreadCountModel {
     );
   }
 
-  UnreadCountModel.fromJson(Map<String, dynamic> json)
-      : sId = json['_id'],
-        participants = json['participants'] != null
-            ? (json['participants'] as List)
-                .map((v) => Participants.fromJson(v))
-                .toList()
-            : null,
-        unreadCount = json['unreadCount'],
-        pinnedMessages = json['pinnedMessages'] ?? [],
-        createdAt = json['createdAt'],
-        updatedAt = json['updatedAt'],
-        lastMessage = json['lastMessage'] != null
-            ? LastMessage.fromJson(json['lastMessage'])
-            : null;
+  // JSON From
+  factory UnreadCountModel.fromJson(Map<String, dynamic> json) {
+    return UnreadCountModel(
+      sId: json['_id'],
+      participants: json['participants'] != null
+          ? (json['participants'] as List)
+              .map((v) => Participants.fromJson(v))
+              .toList()
+          : null,
+      unreadCount: json['unreadCount'],
+      pinnedMessages: json['pinnedMessages'] ?? [],
+      createdAt: json['createdAt'],
+      updatedAt: json['updatedAt'],
+      lastMessage: json['lastMessage'] != null
+          ? LastMessage.fromJson(json['lastMessage'])
+          : null,
+    );
+  }
 
+  // JSON To
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = {};
-    data['_id'] = sId;
-    if (participants != null) {
-      data['participants'] = participants!.map((v) => v.toJson()).toList();
-    }
-    data['unreadCount'] = unreadCount;
-    data['pinnedMessages'] = pinnedMessages;
-    data['createdAt'] = createdAt;
-    data['updatedAt'] = updatedAt;
-    if (lastMessage != null) {
-      data['lastMessage'] = lastMessage!.toJson();
-    }
-    return data;
+    return {
+      '_id': sId,
+      'participants': participants?.map((v) => v.toJson()).toList(),
+      'unreadCount': unreadCount,
+      'pinnedMessages': pinnedMessages,
+      'createdAt': createdAt,
+      'updatedAt': updatedAt,
+      'lastMessage': lastMessage?.toJson(),
+    };
   }
-
-  // ✅ ADD: Equality operators for proper comparison
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    return other is UnreadCountModel &&
-        other.sId == sId &&
-        other.unreadCount == unreadCount;
-  }
-
-  @override
-  int get hashCode => sId.hashCode ^ unreadCount.hashCode;
 }
 
 class Participants {
   final Subscription? subscription;
   final SubscriptionFeatures? subscriptionFeatures;
+  final Status? status;
   final String? sId;
   final String? fullName;
   final String? email;
@@ -94,6 +84,7 @@ class Participants {
   Participants({
     this.subscription,
     this.subscriptionFeatures,
+    this.status,
     this.sId,
     this.fullName,
     this.email,
@@ -101,32 +92,56 @@ class Participants {
     this.id,
   });
 
-  Participants.fromJson(Map<String, dynamic> json)
-      : subscription = json['subscription'] != null
-            ? Subscription.fromJson(json['subscription'])
-            : null,
-        subscriptionFeatures = json['subscriptionFeatures'] != null
-            ? SubscriptionFeatures.fromJson(json['subscriptionFeatures'])
-            : null,
-        sId = json['_id'],
-        fullName = json['fullName'],
-        email = json['email'],
-        avatar =
-            json['avatar'] != null ? Avatar.fromJson(json['avatar']) : null,
-        id = json['id'];
+  Participants copyWith({
+    Subscription? subscription,
+    SubscriptionFeatures? subscriptionFeatures,
+    Status? status,
+    String? sId,
+    String? fullName,
+    String? email,
+    Avatar? avatar,
+    String? id,
+  }) {
+    return Participants(
+      subscription: subscription ?? this.subscription,
+      subscriptionFeatures: subscriptionFeatures ?? this.subscriptionFeatures,
+      status: status ?? this.status,
+      sId: sId ?? this.sId,
+      fullName: fullName ?? this.fullName,
+      email: email ?? this.email,
+      avatar: avatar ?? this.avatar,
+      id: id ?? this.id,
+    );
+  }
+
+  factory Participants.fromJson(Map<String, dynamic> json) {
+    return Participants(
+      subscription: json['subscription'] != null
+          ? Subscription.fromJson(json['subscription'])
+          : null,
+      subscriptionFeatures: json['subscriptionFeatures'] != null
+          ? SubscriptionFeatures.fromJson(json['subscriptionFeatures'])
+          : null,
+      status: json['status'] != null ? Status.fromJson(json['status']) : null,
+      sId: json['_id'],
+      fullName: json['fullName'],
+      email: json['email'],
+      avatar: json['avatar'] != null ? Avatar.fromJson(json['avatar']) : null,
+      id: json['id'],
+    );
+  }
 
   Map<String, dynamic> toJson() {
-    final data = <String, dynamic>{};
-    if (subscription != null) data['subscription'] = subscription!.toJson();
-    if (subscriptionFeatures != null) {
-      data['subscriptionFeatures'] = subscriptionFeatures!.toJson();
-    }
-    data['_id'] = sId;
-    data['fullName'] = fullName;
-    data['email'] = email;
-    if (avatar != null) data['avatar'] = avatar!.toJson();
-    data['id'] = id;
-    return data;
+    return {
+      'subscription': subscription?.toJson(),
+      'subscriptionFeatures': subscriptionFeatures?.toJson(),
+      'status': status?.toJson(),
+      '_id': sId,
+      'fullName': fullName,
+      'email': email,
+      'avatar': avatar?.toJson(),
+      'id': id,
+    };
   }
 }
 
@@ -138,19 +153,36 @@ class Subscription {
 
   Subscription({this.planId, this.status, this.startDate, this.endDate});
 
-  Subscription.fromJson(Map<String, dynamic> json)
-      : planId = json['planId'],
-        status = json['status'],
-        startDate = json['startDate'],
-        endDate = json['endDate'];
+  Subscription copyWith({
+    dynamic planId,
+    String? status,
+    dynamic startDate,
+    dynamic endDate,
+  }) {
+    return Subscription(
+      planId: planId ?? this.planId,
+      status: status ?? this.status,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+    );
+  }
+
+  factory Subscription.fromJson(Map<String, dynamic> json) {
+    return Subscription(
+      planId: json['planId'],
+      status: json['status'],
+      startDate: json['startDate'],
+      endDate: json['endDate'],
+    );
+  }
 
   Map<String, dynamic> toJson() {
-    final data = <String, dynamic>{};
-    data['planId'] = planId;
-    data['status'] = status;
-    data['startDate'] = startDate;
-    data['endDate'] = endDate;
-    return data;
+    return {
+      'planId': planId,
+      'status': status,
+      'startDate': startDate,
+      'endDate': endDate,
+    };
   }
 }
 
@@ -159,8 +191,17 @@ class SubscriptionFeatures {
 
   SubscriptionFeatures({this.premiumIconUrl});
 
-  SubscriptionFeatures.fromJson(Map<String, dynamic> json)
-      : premiumIconUrl = json['premiumIconUrl'];
+  SubscriptionFeatures copyWith({dynamic premiumIconUrl}) {
+    return SubscriptionFeatures(
+      premiumIconUrl: premiumIconUrl ?? this.premiumIconUrl,
+    );
+  }
+
+  factory SubscriptionFeatures.fromJson(Map<String, dynamic> json) {
+    return SubscriptionFeatures(
+      premiumIconUrl: json['premiumIconUrl'],
+    );
+  }
 
   Map<String, dynamic> toJson() {
     return {'premiumIconUrl': premiumIconUrl};
@@ -173,12 +214,53 @@ class Avatar {
 
   Avatar({this.sId, this.imageUrl});
 
-  Avatar.fromJson(Map<String, dynamic> json)
-      : sId = json['_id'],
-        imageUrl = json['imageUrl'];
+  Avatar copyWith({String? sId, String? imageUrl}) {
+    return Avatar(
+      sId: sId ?? this.sId,
+      imageUrl: imageUrl ?? this.imageUrl,
+    );
+  }
+
+  factory Avatar.fromJson(Map<String, dynamic> json) {
+    return Avatar(
+      sId: json['_id'],
+      imageUrl: json['imageUrl'],
+    );
+  }
 
   Map<String, dynamic> toJson() {
-    return {'_id': sId, 'imageUrl': imageUrl};
+    return {
+      '_id': sId,
+      'imageUrl': imageUrl,
+    };
+  }
+}
+
+class Status {
+  final bool? isOnline;
+  final String? lastSeen;
+
+  Status({this.isOnline, this.lastSeen});
+
+  Status copyWith({bool? isOnline, String? lastSeen}) {
+    return Status(
+      isOnline: isOnline ?? this.isOnline,
+      lastSeen: lastSeen ?? this.lastSeen,
+    );
+  }
+
+  factory Status.fromJson(Map<String, dynamic> json) {
+    return Status(
+      isOnline: json['isOnline'],
+      lastSeen: json['lastSeen'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'isOnline': isOnline,
+      'lastSeen': lastSeen,
+    };
   }
 }
 
@@ -191,14 +273,27 @@ class LastMessage {
     this.sentAt,
   });
 
-  LastMessage.fromJson(Map<String, dynamic> json)
-      : text = json['text'],
-        sentAt = json['sentAt'];
+  LastMessage copyWith({
+    String? text,
+    String? sentAt,
+  }) {
+    return LastMessage(
+      text: text ?? this.text,
+      sentAt: sentAt ?? this.sentAt,
+    );
+  }
+
+  factory LastMessage.fromJson(Map<String, dynamic> json) {
+    return LastMessage(
+      text: json['text'],
+      sentAt: json['sentAt'],
+    );
+  }
 
   Map<String, dynamic> toJson() {
-    final data = <String, dynamic>{};
-    data['text'] = text;
-    data['sentAt'] = sentAt;
-    return data;
+    return {
+      'text': text,
+      'sentAt': sentAt,
+    };
   }
 }

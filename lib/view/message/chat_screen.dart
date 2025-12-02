@@ -176,6 +176,20 @@ class _ChatScreenState extends State<ChatScreen>
   StreamSubscription<Map<String, dynamic>>? _messageReactionSubscription;
   late StreamSubscription _pinnedMessageSubscription;
   StreamSubscription? _messagesReadSubscription;
+  bool _showMentionSheet = false;
+  String _currentMentionQuery = '';
+  List<Participant> _filteredMentions = [];
+  int _mentionStartPosition = -1;
+  final List<Map<String, dynamic>> _mentionsInMessage = [];
+  // Add this method after _getInitials method (around line 800)
+  List<Participant> _getGroupMembersForMention() {
+    if (!isGroup || selectedChat == null) return [];
+
+    final participants = selectedChat!.participants ?? [];
+
+    // Filter out current user
+    return participants.where((p) => p.id != currentUserId).toList();
+  }
 
   late StreamSubscription _unpinnedMessageSubscription;
   final List<String> emojiReactions = [
@@ -254,7 +268,229 @@ class _ChatScreenState extends State<ChatScreen>
   final TextEditingController _chatSearchController = TextEditingController();
   List<Message> _chatFilteredMessages = [];
 
-//forward message
+// Add this method after _getGroupMembersForMention
+  void _onMessageTextChanged(String text) {
+    if (!isGroup) return;
+
+    final cursorPosition = _messageController.selection.baseOffset;
+    final textBeforeCursor = text.substring(0, cursorPosition);
+    final lastAtIndex = textBeforeCursor.lastIndexOf('@');
+
+    if (lastAtIndex != -1) {
+      final isValidMention = lastAtIndex == 0 ||
+          text[lastAtIndex - 1] == ' ' ||
+          text[lastAtIndex - 1] == '\n';
+
+      if (isValidMention) {
+        final query = textBeforeCursor.substring(lastAtIndex + 1);
+
+        // ✅ FIX: Allow space ONLY if query is empty (just typed @)
+        // Close mention if there's a space AND we have text before it
+        if (query.contains(' ') && query.trim().isNotEmpty) {
+          setState(() {
+            _showMentionSheet = false;
+            _currentMentionQuery = '';
+            _filteredMentions = [];
+          });
+          return;
+        }
+
+        setState(() {
+          _showMentionSheet = true;
+          _mentionStartPosition = lastAtIndex;
+          _currentMentionQuery = query.toLowerCase();
+          _filteredMentions = _getGroupMembersForMention()
+              .where((p) => p.name.toLowerCase().contains(_currentMentionQuery))
+              .toList();
+        });
+        return;
+      }
+    }
+
+    setState(() {
+      _showMentionSheet = false;
+      _currentMentionQuery = '';
+      _filteredMentions = [];
+    });
+  }
+
+  void _selectMention(Participant participant) {
+    final text = _messageController.text;
+    final cursorPosition = _messageController.selection.baseOffset;
+
+    // Replace from @ to cursor with the mention
+    final beforeMention = text.substring(0, _mentionStartPosition);
+    final afterCursor = text.substring(cursorPosition);
+
+    final mentionText = '@${participant.name}';
+    final newText = '$beforeMention$mentionText $afterCursor';
+
+    // Store mention info for later processing
+    _mentionsInMessage.add({
+      'userId': participant.id,
+      'userName': participant.name,
+      'startIndex': _mentionStartPosition,
+      'endIndex': _mentionStartPosition + mentionText.length,
+    });
+
+    _messageController.text = newText;
+    _messageController.selection = TextSelection.fromPosition(
+      TextPosition(offset: beforeMention.length + mentionText.length + 1),
+    );
+
+    setState(() {
+      _showMentionSheet = false;
+      _currentMentionQuery = '';
+      _filteredMentions = [];
+    });
+  }
+
+// Add this method after _selectMention
+  List<Map<String, dynamic>> _extractMentionsFromText(String text) {
+    final mentions = <Map<String, dynamic>>[];
+    final groupMembers = _getGroupMembersForMention();
+
+    // Find all @ symbols
+    int index = 0;
+    while (index < text.length) {
+      final atIndex = text.indexOf('@', index);
+      if (atIndex == -1) break;
+      int endIndex = atIndex + 1;
+      while (endIndex < text.length) {
+        final char = text[endIndex];
+        // Stop at space, newline, or common punctuation
+        if (char == ' ' ||
+            char == '\n' ||
+            char == ',' ||
+            char == '.' ||
+            char == '!' ||
+            char == '?') {
+          break;
+        }
+        endIndex++;
+      }
+
+      final mentionText = text.substring(atIndex + 1, endIndex);
+
+      // Try to match with a group member
+      final participant = groupMembers.firstWhereOrNull(
+        (p) => p.name.toLowerCase() == mentionText.toLowerCase(),
+      );
+
+      if (participant != null) {
+        mentions.add({
+          'userId': participant.id,
+          'userName': participant.name,
+          'startIndex': atIndex,
+          'endIndex': endIndex,
+        });
+      }
+
+      index = endIndex;
+    }
+
+    return mentions;
+  }
+
+  // Add this widget method after _buildForwardPreviewContent (around line 1100)
+  Widget _buildMentionSheet() {
+    if (!_showMentionSheet || _filteredMentions.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Positioned(
+      bottom: 120, // Position above the input field
+      left: 16,
+      right: 16,
+      child: Material(
+        elevation: 8,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          constraints: const BoxConstraints(maxHeight: 200),
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.greyColor.withOpacity(0.3)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: AppColors.greyColor.withOpacity(0.3),
+                    ),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.alternate_email,
+                        size: 16, color: Colors.orange),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Mention someone',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: AppFonts.opensansRegular,
+                        color: Theme.of(context).textTheme.bodyLarge?.color,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: _filteredMentions.length,
+                  itemBuilder: (context, index) {
+                    final participant = _filteredMentions[index];
+                    return ListTile(
+                      dense: true,
+                      leading: CircleAvatar(
+                        radius: 18,
+                        backgroundColor: Colors.transparent,
+                        backgroundImage: participant.avatar != null &&
+                                participant.avatar!.isNotEmpty
+                            ? CacheImageLoader(
+                                participant.avatar!,
+                                ImageAssets.defaultProfileImg,
+                              )
+                            : null,
+                        child: participant.avatar == null ||
+                                participant.avatar!.isEmpty
+                            ? Text(
+                                _getInitials(participant.name),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : null,
+                      ),
+                      title: Text(
+                        participant.name,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontFamily: AppFonts.opensansRegular,
+                          color: Theme.of(context).textTheme.bodyLarge?.color,
+                        ),
+                      ),
+                      onTap: () => _selectMention(participant),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
 // Add this method to show forward dialog
   void _showForwardMessageDialog(Message message) {
     setState(() {
@@ -266,8 +502,6 @@ class _ChatScreenState extends State<ChatScreen>
     });
   }
 
-// Add scroll listener for lazy loading
-  // Fixed: _onScroll method with better logic
   void _onScroll() {
     if (!_scrollController.hasClients) return;
     final offset = _scrollController.offset;
@@ -3107,37 +3341,70 @@ class _ChatScreenState extends State<ChatScreen>
     }
   }
 
-  Widget _buildMessageContent(String content, {Color? textColor}) {
-    final urlRegex = RegExp(
-      r'https?://[^\s]+',
-      caseSensitive: false,
-    );
+  Widget _buildMessageContent(String content,
+      {Color? textColor, List<Map<String, dynamic>>? mentions}) {
+    // Extract mentions if not provided
+    final messageMentions = mentions ?? _extractMentionsFromText(content);
 
-    final matches = urlRegex.allMatches(content);
-
-    if (matches.isEmpty) {
-      // No URLs found, return plain text
-      return Text(
-        content,
-        style: TextStyle(
-          fontFamily: AppFonts.opensansRegular,
-          fontSize: 16,
-          color: textColor ?? Colors.black87,
-          height: 1.3,
-        ),
+    if (messageMentions.isEmpty) {
+      // No mentions, use existing URL handling
+      final urlRegex = RegExp(
+        r'https?://[^\s]+',
+        caseSensitive: false,
       );
-    }
+      final matches = urlRegex.allMatches(content);
 
-    // URLs found, build RichText with clickable links
-    List<TextSpan> spans = [];
-    int lastEnd = 0;
-
-    for (final match in matches) {
-      // Add text before URL
-      if (match.start > lastEnd) {
-        spans.add(TextSpan(
-          text: content.substring(lastEnd, match.start),
+      if (matches.isEmpty) {
+        return Text(
+          content,
           style: TextStyle(
+            fontFamily: AppFonts.opensansRegular,
+            fontSize: 16,
+            color: textColor ?? Colors.black87,
+            height: 1.3,
+          ),
+        );
+      }
+
+      // Build with URLs
+      List<TextSpan> spans = [];
+      int lastEnd = 0;
+
+      for (final match in matches) {
+        if (match.start > lastEnd) {
+          spans.add(TextSpan(
+            text: content.substring(lastEnd, match.start),
+            style: TextStyle(
+              fontSize: 16,
+              color: textColor ?? Colors.black87,
+              height: 1.3,
+            ),
+          ));
+        }
+
+        final url = match.group(0)!;
+        spans.add(
+          TextSpan(
+            text: url,
+            style: TextStyle(
+              fontFamily: AppFonts.opensansRegular,
+              fontSize: 16,
+              color: AppColors.blackColor,
+              decoration: TextDecoration.underline,
+              height: 1.3,
+            ),
+            recognizer: TapGestureRecognizer()..onTap = () => _openUrl(url),
+          ),
+        );
+
+        lastEnd = match.end;
+      }
+
+      if (lastEnd < content.length) {
+        spans.add(TextSpan(
+          text: content.substring(lastEnd),
+          style: TextStyle(
+            fontFamily: AppFonts.opensansRegular,
             fontSize: 16,
             color: textColor ?? Colors.black87,
             height: 1.3,
@@ -3145,7 +3412,101 @@ class _ChatScreenState extends State<ChatScreen>
         ));
       }
 
-      // Add clickable URL
+      return RichText(
+        text: TextSpan(children: spans),
+      );
+    }
+
+    // Build with mentions and URLs
+    List<TextSpan> spans = [];
+    int lastEnd = 0;
+
+    // Sort mentions by start index
+    final sortedMentions = List<Map<String, dynamic>>.from(messageMentions)
+      ..sort(
+          (a, b) => (a['startIndex'] as int).compareTo(b['startIndex'] as int));
+
+    for (final mention in sortedMentions) {
+      final startIndex = mention['startIndex'] as int;
+      final endIndex = mention['endIndex'] as int;
+      final userName = mention['userName'] as String;
+      final userId = mention['userId'] as String;
+
+      // Add text before mention
+      if (startIndex > lastEnd) {
+        final textBefore = content.substring(lastEnd, startIndex);
+        spans.addAll(_buildTextWithUrls(textBefore, textColor));
+      }
+
+      // Add mention with orange color and tap handler
+      spans.add(
+        TextSpan(
+          text: '@$userName',
+          style: TextStyle(
+            fontFamily: AppFonts.opensansRegular,
+            fontSize: 16,
+            color: Colors.orange,
+            fontWeight: FontWeight.w600,
+            height: 1.3,
+          ),
+          recognizer: TapGestureRecognizer()
+            ..onTap = () {
+              Get.toNamed(RouteName.clipProfieScreen, arguments: userId);
+            },
+        ),
+      );
+
+      lastEnd = endIndex;
+    }
+
+    // Add remaining text
+    if (lastEnd < content.length) {
+      final remainingText = content.substring(lastEnd);
+      spans.addAll(_buildTextWithUrls(remainingText, textColor));
+    }
+
+    return RichText(
+      text: TextSpan(children: spans),
+    );
+  }
+
+// Helper method to build text spans with URL detection
+  List<TextSpan> _buildTextWithUrls(String text, Color? textColor) {
+    final urlRegex = RegExp(r'https?://[^\s]+', caseSensitive: false);
+    final matches = urlRegex.allMatches(text);
+
+    if (matches.isEmpty) {
+      return [
+        TextSpan(
+          text: text,
+          style: TextStyle(
+            fontFamily: AppFonts.opensansRegular,
+            fontSize: 16,
+            color: textColor ?? Colors.black87,
+            height: 1.3,
+          ),
+        ),
+      ];
+    }
+
+    List<TextSpan> spans = [];
+    int lastEnd = 0;
+
+    for (final match in matches) {
+      if (match.start > lastEnd) {
+        spans.add(
+          TextSpan(
+            text: text.substring(lastEnd, match.start),
+            style: TextStyle(
+              fontFamily: AppFonts.opensansRegular,
+              fontSize: 16,
+              color: textColor ?? Colors.black87,
+              height: 1.3,
+            ),
+          ),
+        );
+      }
+
       final url = match.group(0)!;
       spans.add(
         TextSpan(
@@ -3164,22 +3525,21 @@ class _ChatScreenState extends State<ChatScreen>
       lastEnd = match.end;
     }
 
-    // Add remaining text
-    if (lastEnd < content.length) {
-      spans.add(TextSpan(
-        text: content.substring(lastEnd),
-        style: TextStyle(
-          fontFamily: AppFonts.opensansRegular,
-          fontSize: 16,
-          color: textColor ?? Colors.black87,
-          height: 1.3,
+    if (lastEnd < text.length) {
+      spans.add(
+        TextSpan(
+          text: text.substring(lastEnd),
+          style: TextStyle(
+            fontFamily: AppFonts.opensansRegular,
+            fontSize: 16,
+            color: textColor ?? Colors.black87,
+            height: 1.3,
+          ),
         ),
-      ));
+      );
     }
 
-    return RichText(
-      text: TextSpan(children: spans),
-    );
+    return spans;
   }
 
   Future<void> _openUrl(String url) async {
@@ -4137,14 +4497,13 @@ class _ChatScreenState extends State<ChatScreen>
           currentUserProfile = profile;
         });
       } else {
-        // If not found in SharedPreferences, get from controller
         await _profileController.userListApi();
-        if (_profileController.rxRequestStatus.value == Status.COMPLETED) {
+        if (_profileController.rxRequestStatus.value == Looks.COMPLETED) {
           setState(() {
             currentUserProfile =
                 _profileController.userList.value as UserProfileModel?;
           });
-          // Save to SharedPreferences for future use
+
           await _prefs.saveUserProfile(
               _profileController.userList.value as UserProfileModel);
         }
@@ -4923,22 +5282,11 @@ class _ChatScreenState extends State<ChatScreen>
     });
   }
 
-  // Method to set last read position when marking as read
-  void _setLastReadPosition(String chatId) {
-    final chatMessages = messages[chatId] ?? [];
-    if (chatMessages.isNotEmpty) {
-      // Store the ID of the last message as the last read message
-      lastReadMessageId[chatId] = chatMessages.last.id;
-    }
-  }
-
   void markChatAsRead(String chatId, String currentUserId) {
     _socketService.markMessagesAsRead(
       chatId: chatId,
       userId: currentUserId,
     );
-
-    // Update unread count and trigger sorting
     setState(() {
       unreadCounts[chatId] = 0;
     });
@@ -4948,29 +5296,6 @@ class _ChatScreenState extends State<ChatScreen>
     });
   }
 
-  // Fixed _handleMessageReactionUpdated method
-  // void _handleMessageReactionUpdated(Map<String, dynamic> updatedMessage) {
-  //   final String messageIdToUpdate = updatedMessage['_id'];
-
-  //   // Use your current chat ID variable (selectedChatId, currentChatId, etc.)
-  //   if (selectedChatId == null) return;
-
-  //   setState(() {
-  //     List<Message> currentChatMessages = messages[selectedChatId!] ?? [];
-
-  //     for (int i = 0; i < currentChatMessages.length; i++) {
-  //       if (currentChatMessages[i].id == messageIdToUpdate) {
-  //         currentChatMessages[i].reactions =
-  //             (updatedMessage['reactions'] as List?)
-  //                     ?.map((r) => Reaction.fromJson(r))
-  //                     .toList() ??
-  //                 [];
-
-  //         break;
-  //       }
-  //     }
-  //   });
-  // }
   void _handleMessageReactionUpdated(Map<String, dynamic> updatedMessage) {
     final String messageIdToUpdate = updatedMessage['_id'];
 
@@ -7112,7 +7437,6 @@ class _ChatScreenState extends State<ChatScreen>
     );
   }
 
-// Enhanced _sendMessage method
   void _sendMessage() {
     if (selectedChatId == null ||
         _messageController.text.trim().isEmpty ||
@@ -7127,10 +7451,9 @@ class _ChatScreenState extends State<ChatScreen>
 
     _recentlySentMessages.add(tempMessageId);
 
-    // ✅ Auto-remove from recentlySent after timeout
     Timer(const Duration(seconds: 3), () {
       _recentlySentMessages.remove(tempMessageId);
-      setState(() {}); // Force UI update
+      setState(() {});
     });
 
     if (isGroup) {
@@ -7152,10 +7475,12 @@ class _ChatScreenState extends State<ChatScreen>
     final messageContent = _messageController.text;
     String formattedContent = _applyFormatting(messageContent);
 
+    // Extract mentions from the message
+    final mentions = isGroup ? _extractMentionsFromText(formattedContent) : [];
+
     final replyToMessageId = replyingToMessage?.id;
     final isReplying = showReplyPreview && replyingToMessage != null;
 
-    // Optimistic UI update
     final newMessage = Message(
       id: tempMessageId,
       content: formattedContent,
@@ -7173,6 +7498,7 @@ class _ChatScreenState extends State<ChatScreen>
               sender: replyingToMessage!.sender,
             )
           : null,
+      // mentions: mentions, // Add this if your Message model supports it
     );
 
     setState(() {
@@ -7181,6 +7507,7 @@ class _ChatScreenState extends State<ChatScreen>
         newMessage
       ];
       _showScrollToBottom = false;
+      _mentionsInMessage.clear(); // Clear mentions list
     });
 
     _messageController.clear();
@@ -7188,6 +7515,9 @@ class _ChatScreenState extends State<ChatScreen>
       _isBold = false;
       _isItalic = false;
       _isUnderline = false;
+      _showMentionSheet = false; // Close mention sheet
+      _currentMentionQuery = '';
+      _filteredMentions = [];
     });
 
     _cancelReply();
@@ -7204,10 +7534,8 @@ class _ChatScreenState extends State<ChatScreen>
       groupId: isGroup ? selectedChatId : null,
       content: formattedContent,
       replyToMessageId: isReplying ? replyToMessageId : null,
+      // mentions: mentions.map((m) => m['userId'] as String).toList(), // Add if socket supports
       callback: (response) {
-        log('📨 Callback received: $response');
-
-        // ✅ CRITICAL: Remove from recentlySent immediately
         _recentlySentMessages.remove(tempMessageId);
 
         final success = response['success'] ?? false;
@@ -7220,13 +7548,10 @@ class _ChatScreenState extends State<ChatScreen>
 
           setState(() {
             final chatMessages = messages[selectedChatId!] ?? [];
-
-            // Find the temp message
             final tempIndex =
                 chatMessages.indexWhere((msg) => msg.id == tempMessageId);
 
             if (tempIndex != -1) {
-              // Create NEW message with real ID
               final updatedMessage = Message(
                 id: realMessageId,
                 content: chatMessages[tempIndex].content,
@@ -7238,10 +7563,8 @@ class _ChatScreenState extends State<ChatScreen>
                 reactions: chatMessages[tempIndex].reactions,
               );
 
-              // Replace temp message with real message
               chatMessages[tempIndex] = updatedMessage;
 
-              // Update message keys
               if (_messageKeys.containsKey(tempMessageId)) {
                 final key = _messageKeys.remove(tempMessageId);
                 if (key != null) {
@@ -7249,7 +7572,6 @@ class _ChatScreenState extends State<ChatScreen>
                 }
               }
 
-              // ✅ CRITICAL: Use List.from to create new list reference
               messages[selectedChatId!] = List<Message>.from(chatMessages);
             }
           });
@@ -7258,7 +7580,6 @@ class _ChatScreenState extends State<ChatScreen>
         } else {
           log('❌ Message send failed: ${response['message']}');
 
-          // Remove failed message
           setState(() {
             final chatMessages = messages[selectedChatId!] ?? [];
             messages[selectedChatId!] =
@@ -8427,6 +8748,7 @@ class _ChatScreenState extends State<ChatScreen>
             tooltip: 'Select Sticker',
             onPressed: _showStickerSelector,
           ),
+          // Replace the Expanded TextField in _buildInputRow (around line 3800) with:
           Expanded(
             child: TextField(
               controller:
@@ -8440,6 +8762,9 @@ class _ChatScreenState extends State<ChatScreen>
                 contentPadding: const EdgeInsets.symmetric(vertical: 8),
               ),
               maxLines: null,
+              onChanged: isGroup
+                  ? _onMessageTextChanged
+                  : null, // Add mention detection for groups
               onSubmitted: (_) {
                 if (_isEditingMode) {
                   _saveEditedMessage();
@@ -8609,6 +8934,32 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   Widget _buildChatMessages() {
+    final unreadController = Get.find<UnreadCountController>();
+
+    final unreadChat = unreadController.unreadCountList
+        .firstWhereOrNull((e) => e.sId == selectedChatId);
+
+    final myId = currentUserId;
+
+    Participants? otherUser;
+    if (unreadChat?.participants != null) {
+      otherUser =
+          unreadChat!.participants!.firstWhereOrNull((p) => p.id != myId);
+    }
+
+    final status = otherUser?.status;
+
+    String formatLastSeen(String? isoTime) {
+      if (isoTime == null) return "not active";
+
+      final date = DateTime.parse(isoTime).toLocal();
+      final hour = date.hour % 12 == 0 ? 12 : date.hour % 12;
+      final minute = date.minute.toString().padLeft(2, '0');
+      final ampm = date.hour >= 12 ? "PM" : "AM";
+
+      return "$hour:$minute $ampm";
+    }
+
     if (selectedChatId == null || selectedChat == null) {
       return const SizedBox.shrink();
     }
@@ -8709,11 +9060,15 @@ class _ChatScreenState extends State<ChatScreen>
                               ),
                               if (chat.isGroup != true)
                                 Text(
-                                  'last seen today at 10:45 AM',
+                                  status?.isOnline == true
+                                      ? "Active now"
+                                      : "Last seen ${formatLastSeen(status?.lastSeen)}",
                                   style: TextStyle(
                                     fontSize: 12,
+                                    color: status?.isOnline == true
+                                        ? Colors.green
+                                        : AppColors.greyColor,
                                     fontFamily: AppFonts.opensansRegular,
-                                    color: Colors.grey,
                                   ),
                                 ),
                               if (chat.isGroup == true)
@@ -8945,6 +9300,7 @@ class _ChatScreenState extends State<ChatScreen>
             right: 16,
             child: _buildScrollToBottomButton(),
           ),
+        if (_showMentionSheet && isGroup) _buildMentionSheet(),
       ],
     );
   }
@@ -9063,68 +9419,6 @@ class _ChatScreenState extends State<ChatScreen>
         ),
       ),
     );
-  }
-
-  void _scrollToMessagePrecise(dynamic pinnedMessage) {
-    if (pinnedMessage == null) {
-      _showErrorSnackBar('Invalid pinned message');
-      return;
-    }
-
-    String? messageId = _getMessageId(pinnedMessage);
-
-    if (messageId == null || messageId.isEmpty) {
-      _showErrorSnackBar('Invalid pinned message ID');
-      return;
-    }
-
-    final chatMessages = messages[selectedChatId] ?? [];
-    int messageIndex = -1;
-
-    for (int i = 0; i < chatMessages.length; i++) {
-      if (_getMessageId(chatMessages[i]) == messageId) {
-        messageIndex = i;
-        break;
-      }
-    }
-
-    if (messageIndex == -1) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Message not found in current chat'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
-
-    // Set the highlighted message
-    setState(() {
-      _highlightedMessageId = messageId;
-    });
-
-    // Use Scrollable.ensureVisible for precise scrolling
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final BuildContext? context = _messageKeys[messageId]?.currentContext;
-      if (context != null) {
-        Scrollable.ensureVisible(
-          context,
-          duration: const Duration(milliseconds: 800),
-          curve: Curves.easeInOut,
-          alignment: 0.1, // Scroll to 10% from top
-        ).then((_) {
-          // Remove highlight after 3 seconds
-          _highlightTimer?.cancel();
-          _highlightTimer = Timer(const Duration(seconds: 3), () {
-            if (mounted) {
-              setState(() {
-                _highlightedMessageId = null;
-              });
-            }
-          });
-        });
-      }
-    });
   }
 
   Widget _buildPinnedMessageCard(dynamic message) {

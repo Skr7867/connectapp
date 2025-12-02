@@ -143,7 +143,7 @@ class SocketService {
 
       final String userId = user?.user.id ?? "";
 
-      log("🔌 Connecting to socket: $serverUrl with userId: $userId");
+      log("Connecting to socket: $serverUrl with userId: $userId");
 
       _socket = IO.io(
         serverUrl,
@@ -152,17 +152,20 @@ class SocketService {
             .enableForceNew()
             .enableReconnection()
             .setPath('/socket.io')
-            .setExtraHeaders({
-              'user-id': userId,
-              'Authorization': 'Bearer $token',
+            .setAuth({
+              'userId': userId,
+              'token': token,
             })
             .build(),
       );
+      _socket?.onReconnect((_) {
+        _socket?.auth = {'userId': userId};
+      });
 
       // Basic connection lifecycle logs and handlers
       _socket?.onConnect((_) {
-        log("✅ SOCKET CONNECTED with userId: $userId");
-        // ✅ Request unread counts on reconnection
+        log(" SOCKET CONNECTED with userId: $userId");
+        //  Request unread counts on reconnection
         _requestAllUnreadCounts(userId);
       });
 
