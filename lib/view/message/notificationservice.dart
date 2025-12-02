@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -68,17 +67,6 @@ class NotificationService {
     final androidPlugin = _notifications.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
     await androidPlugin?.requestNotificationsPermission();
-  }
-
-  void _onNotificationTapped(NotificationResponse response) {
-    if (response.payload != null) {
-      try {
-        final payloadData = jsonDecode(response.payload!);
-        _handleNotificationTapFromPayload(payloadData);
-      } catch (e) {
-        log('Error parsing notification payload: $e');
-      }
-    }
   }
 
   void handleNotificationOpen(RemoteMessage message) {
@@ -425,9 +413,9 @@ class NotificationService {
     );
   }
 
-  Future<bool> _isAppInForeground() async {
-    return WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
-  }
+  // Future<bool> _isAppInForeground() async {
+  //   return WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
+  // }
 
   Future<List<Map<String, dynamic>>> _getStoredMessages(String chatId) async {
     final prefs = await SharedPreferences.getInstance();

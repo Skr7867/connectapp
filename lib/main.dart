@@ -34,6 +34,11 @@ String? lastMessageId;
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  if (message.notification != null) {
+    log("System notification already shown -> Skipping custom notification");
+    return;
+  }
+
   NotificationService().showNotification(message);
 }
 
@@ -126,6 +131,7 @@ class _MyAppState extends State<MyApp> {
       final incomingChatId = data['chatId'];
 
       log("[FG] Foreground message received from chat: $incomingChatId");
+      log('gf $data');
 
       if (incomingChatId != null &&
           ChatOpenTracker.currentChatId != null &&
