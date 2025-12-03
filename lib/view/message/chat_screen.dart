@@ -177,15 +177,16 @@ class _ChatScreenState extends State<ChatScreen>
   late StreamSubscription _pinnedMessageSubscription;
   StreamSubscription? _messagesReadSubscription;
   bool _showMentionSheet = false;
+  String _mentionQuery = '';
   String _currentMentionQuery = '';
-  List<Participant> _filteredMentions = [];
+  List<GroupMember> _filteredMentions = [];
   int _mentionStartPosition = -1;
   final List<Map<String, dynamic>> _mentionsInMessage = [];
   // Add this method after _getInitials method (around line 800)
-  List<Participant> _getGroupMembersForMention() {
+  List<GroupMember> _getGroupMembersForMention() {
     if (!isGroup || selectedChat == null) return [];
 
-    final participants = selectedChat!.participants ?? [];
+    final participants = selectedGroup!.members!;
 
     // Filter out current user
     return participants.where((p) => p.id != currentUserId).toList();
@@ -300,7 +301,9 @@ class _ChatScreenState extends State<ChatScreen>
           _mentionStartPosition = lastAtIndex;
           _currentMentionQuery = query.toLowerCase();
           _filteredMentions = _getGroupMembersForMention()
-              .where((p) => p.name.toLowerCase().contains(_currentMentionQuery))
+              .where((p) => p.userId.username!
+                  .toLowerCase()
+                  .contains(_currentMentionQuery))
               .toList();
         });
         return;
@@ -314,7 +317,37 @@ class _ChatScreenState extends State<ChatScreen>
     });
   }
 
-  void _selectMention(Participant participant) {
+  // void _selectMention(Participant participant) {
+  //   final text = _messageController.text;
+  //   final cursorPosition = _messageController.selection.baseOffset;
+
+  //   // Replace from @ to cursor with the mention
+  //   final beforeMention = text.substring(0, _mentionStartPosition);
+  //   final afterCursor = text.substring(cursorPosition);
+
+  //   final mentionText = '@${participant.name}';
+  //   final newText = '$beforeMention$mentionText $afterCursor';
+
+  //   // Store mention info for later processing
+  //   _mentionsInMessage.add({
+  //     'userId': participant.id,
+  //     'userName': participant.name,
+  //     'startIndex': _mentionStartPosition,
+  //     'endIndex': _mentionStartPosition + mentionText.length,
+  //   });
+
+  //   _messageController.text = newText;
+  //   _messageController.selection = TextSelection.fromPosition(
+  //     TextPosition(offset: beforeMention.length + mentionText.length + 1),
+  //   );
+
+  //   setState(() {
+  //     _showMentionSheet = false;
+  //     _currentMentionQuery = '';
+  //     _filteredMentions = [];
+  //   });
+  // }
+  void _selectMention(GroupMember participant) {
     final text = _messageController.text;
     final cursorPosition = _messageController.selection.baseOffset;
 
@@ -322,13 +355,14 @@ class _ChatScreenState extends State<ChatScreen>
     final beforeMention = text.substring(0, _mentionStartPosition);
     final afterCursor = text.substring(cursorPosition);
 
-    final mentionText = '@${participant.name}';
+    // ✅ Use participant.userId.fullName instead of participant.name
+    final mentionText = '@${participant.userId.username}';
     final newText = '$beforeMention$mentionText $afterCursor';
 
     // Store mention info for later processing
     _mentionsInMessage.add({
-      'userId': participant.id,
-      'userName': participant.name,
+      'userId': participant.userId.id,
+      'userName': participant.userId.username,
       'startIndex': _mentionStartPosition,
       'endIndex': _mentionStartPosition + mentionText.length,
     });
@@ -346,6 +380,52 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
 // Add this method after _selectMention
+  // List<Map<String, dynamic>> _extractMentionsFromText(String text) {
+  //   final mentions = <Map<String, dynamic>>[];
+  //   final groupMembers = _getGroupMembersForMention();
+
+  //   // Find all @ symbols
+  //   int index = 0;
+  //   while (index < text.length) {
+  //     final atIndex = text.indexOf('@', index);
+  //     if (atIndex == -1) break;
+  //     int endIndex = atIndex + 1;
+  //     while (endIndex < text.length) {
+  //       final char = text[endIndex];
+  //       // Stop at space, newline, or common punctuation
+  //       if (char == ' ' ||
+  //           char == '\n' ||
+  //           char == ',' ||
+  //           char == '.' ||
+  //           char == '!' ||
+  //           char == '?') {
+  //         break;
+  //       }
+  //       endIndex++;
+  //     }
+
+  //     final mentionText = text.substring(atIndex + 1, endIndex);
+
+  //     // Try to match with a group member
+  //     final participant = groupMembers.firstWhereOrNull(
+  //       (p) => p.userId.username == mentionText.toLowerCase(),
+  //     );
+
+  //     if (participant != null) {
+  //       mentions.add({
+  //         'userId': participant.id,
+  //         'userName': participant.userId.username,
+  //         'startIndex': atIndex,
+  //         'endIndex': endIndex,
+  //       });
+  //     }
+
+  //     index = endIndex;
+  //   }
+
+  //   return mentions;
+  // }
+
   List<Map<String, dynamic>> _extractMentionsFromText(String text) {
     final mentions = <Map<String, dynamic>>[];
     final groupMembers = _getGroupMembersForMention();
@@ -374,13 +454,15 @@ class _ChatScreenState extends State<ChatScreen>
 
       // Try to match with a group member
       final participant = groupMembers.firstWhereOrNull(
-        (p) => p.name.toLowerCase() == mentionText.toLowerCase(),
+        (p) =>
+            p.userId.fullName == mentionText ||
+            p.userId.username == mentionText.toLowerCase(),
       );
 
       if (participant != null) {
         mentions.add({
-          'userId': participant.id,
-          'userName': participant.name,
+          'userId': participant.userId.id, // ✅ Use userId.id
+          'userName': participant.userId.username, // ✅ Use userId.fullName
           'startIndex': atIndex,
           'endIndex': endIndex,
         });
@@ -452,17 +534,17 @@ class _ChatScreenState extends State<ChatScreen>
                       leading: CircleAvatar(
                         radius: 18,
                         backgroundColor: Colors.transparent,
-                        backgroundImage: participant.avatar != null &&
-                                participant.avatar!.isNotEmpty
+                        backgroundImage: participant.userId.avatar != null &&
+                                participant.userId.avatar!.imageUrl.isNotEmpty
                             ? CacheImageLoader(
-                                participant.avatar!,
+                                participant.userId.avatar!.imageUrl,
                                 ImageAssets.defaultProfileImg,
                               )
                             : null,
-                        child: participant.avatar == null ||
-                                participant.avatar!.isEmpty
+                        child: participant.userId.avatar == null ||
+                                participant.userId.avatar!.imageUrl.isEmpty
                             ? Text(
-                                _getInitials(participant.name),
+                                _getInitials(participant.userId.fullName),
                                 style: const TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
@@ -472,7 +554,15 @@ class _ChatScreenState extends State<ChatScreen>
                             : null,
                       ),
                       title: Text(
-                        participant.name,
+                        participant.userId.fullName.toString(),
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontFamily: AppFonts.opensansRegular,
+                          color: Theme.of(context).textTheme.bodyLarge?.color,
+                        ),
+                      ),
+                      subtitle: Text(
+                        participant.userId.username.toString(),
                         style: TextStyle(
                           fontSize: 14,
                           fontFamily: AppFonts.opensansRegular,
@@ -5120,7 +5210,7 @@ class _ChatScreenState extends State<ChatScreen>
       // Count groups created by current user (where user is the creator)
       int createdGroupsCount = 0;
       for (var group in fetchedGroups) {
-        if (group.createdBy.id == currentUserId) {
+        if (group.createdBy!.id == currentUserId) {
           createdGroupsCount++;
         }
       }
@@ -5256,7 +5346,7 @@ class _ChatScreenState extends State<ChatScreen>
         // Example implementation:
         final groupIndex = groups.indexWhere((group) => group.id == groupId);
         if (groupIndex != -1) {
-          groups[groupIndex].admins.add(userName);
+          groups[groupIndex].admins!.add(userName);
         }
       });
 
@@ -6084,7 +6174,7 @@ class _ChatScreenState extends State<ChatScreen>
     if (isGroup) {
       // Get group info from your groups list
       final group = groups.firstWhere((g) => g.id == chatId);
-      groupName = group.name;
+      groupName = group.name.toString();
       avatar = group.groupAvatar;
 
       // For groups, use the sender's avatar if available
@@ -6224,7 +6314,7 @@ class _ChatScreenState extends State<ChatScreen>
 
     _socketService.deleteGroup(
       groupId: selectedGroup?.id ?? '',
-      ownerId: selectedGroup?.createdBy.id ?? '',
+      ownerId: selectedGroup?.createdBy!.id ?? '',
       callback: (bool success) {
         if (success) {
           setState(() {
@@ -6457,7 +6547,7 @@ class _ChatScreenState extends State<ChatScreen>
 
   bool get isAdmin {
     final group = selectedGroup;
-    return group?.admins.contains(currentUserId) ?? false;
+    return group?.admins!.contains(currentUserId) ?? false;
   }
 
   void _selectChat(String chatId) async {
@@ -6681,37 +6771,34 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   void _showMemberOptionsDialog(BuildContext context, GroupMember member) {
-    final userInfo = member.userInfo; // Use getter
+    // final userInfo = member.userInfo; // Use getter
 
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shadowColor: const Color.fromARGB(255, 141, 140, 140)
-              .withOpacity(0.6), // Set shadow color here
-          elevation: 10, // IMPORTANT for shadow visibility
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           title: Row(
             children: [
               CircleAvatar(
                 radius: 20,
-                backgroundImage: userInfo.avatar?.imageUrl != null
-                    ? CacheImageLoader(
-                        userInfo.avatar!.imageUrl,
-                        ImageAssets.defaultProfileImg,
+                backgroundImage: CacheImageLoader(
+                    member.userId.avatar!.imageUrl,
+                    ImageAssets.defaultProfileImg),
+                child: member.userId.avatar?.imageUrl == null
+                    ? Text(
+                        member.userId.fullName.isNotEmpty
+                            ? member.userId.fullName[0].toUpperCase()
+                            : '?',
+                        style: const TextStyle(fontSize: 16),
                       )
-                    : AssetImage(ImageAssets.defaultProfileImg)
-                        as ImageProvider,
+                    : null,
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  userInfo.fullName,
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).textTheme.bodyLarge?.color,
-                      fontFamily: AppFonts.opensansRegular),
+                  member.userId.fullName,
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.w600),
                 ),
               ),
             ],
@@ -6721,20 +6808,16 @@ class _ChatScreenState extends State<ChatScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Member since: ${DateFormat.yMMMd().format(DateTime.parse(member.joinedAt))}',
+                'Member since: ${member.joinedAt != null ? DateFormat.yMMMd().format(DateTime.parse(member.joinedAt)) : member.joinedAt}',
                 style: TextStyle(
                   fontSize: 16,
-                  fontFamily: AppFonts.opensansRegular,
                   color: Colors.grey[600],
                 ),
               ),
               const SizedBox(height: 16),
-              Text(
+              const Text(
                 'What would you like to do?',
-                style: TextStyle(
-                    fontSize: 16,
-                    color: Theme.of(context).textTheme.bodyLarge?.color,
-                    fontFamily: AppFonts.opensansRegular),
+                style: TextStyle(fontSize: 16),
               ),
             ],
           ),
@@ -6751,6 +6834,10 @@ class _ChatScreenState extends State<ChatScreen>
                 Navigator.of(context).pop();
                 startPrivateChatWithMember(member);
               },
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.blue,
+              ),
+              // icon: const Icon(Icons.message),
               child: const Text('Message'),
             ),
             TextButton(
@@ -6770,6 +6857,9 @@ class _ChatScreenState extends State<ChatScreen>
                   Navigator.of(context).pop();
                   _makeUserAdmin(member);
                 },
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.green,
+                ),
                 child: const Text(
                   'Make Admin',
                   style: TextStyle(fontWeight: FontWeight.bold),
@@ -6856,36 +6946,38 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   void startPrivateChatWithMember(GroupMember member) {
-    final userInfo = member.userInfo; // Use getter
-
     // Don't allow messaging yourself
-    if (userInfo.id == currentUserId) {
+    if (member.userId.id == currentUserId) {
       _showSnackBar('You cannot send a message to yourself');
       return;
     } else {
-      otherId = userInfo.id;
+      otherId = member.userId.id;
     }
 
-    // Rest of your code...
-    final existingChat = directChats.firstWhereOrNull(
-      (chat) => chat.participants?.any((p) => p.id == userInfo.id) == true,
+    // Check if there's already an existing private chat with this user
+    final existingChat = directChats.firstWhere(
+      (chat) => chat.participants?.any((p) => p.id == member.userId.id) == true,
+      orElse: () => null as Chat,
     );
 
     if (existingChat != null) {
+      // If chat already exists, just open it
       setState(() {
         selectedChatId = existingChat.id;
         showChatList = false;
         showGroupInfo = false;
-        selectedSection = 'direct';
+        selectedSection = 'direct'; // Switch to direct messages tab
       });
-      _showSnackBar('Opening existing chat with ${userInfo.fullName}');
+      _showSnackBar('Opening existing chat with ${member.userId.fullName}');
     } else {
+      // Start new private chat
       setState(() {
         showGroupInfo = false;
         showChatList = false;
       });
-      _showSnackBar('Starting private chat with ${userInfo.fullName}...');
-      _handleStartPrivateChat(userInfo.id);
+
+      _showSnackBar('Starting private chat with ${member.userId.fullName}...');
+      _handleStartPrivateChat(member.userId.id);
     }
   }
 
@@ -7108,36 +7200,16 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   Widget _buildGroupInfo() {
-    final group = selectedGroup;
-
-    if (group == null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 64, color: Colors.grey),
-            SizedBox(height: 16),
-            Text('Group information not available'),
-          ],
-        ),
-      );
-    }
-
-    // Safe access to group members
-    final members = group.members ?? [];
-
-    // Safe access to admin - use userInfo getter
-    final groupAdmin = members.firstWhereOrNull(
-      (member) => group.admins.contains(member.userInfo.id) ?? false,
-    );
-
-    final groupAdminName = groupAdmin?.userInfo.fullName ?? 'Unknown';
-    final description = group.description ?? 'No description';
-    final createdAtFormatted = group.createdAt != null
-        ? DateFormat.yMMMd().format(DateTime.parse(group.createdAt))
-        : 'Unknown';
-    final totalMembers = members.length;
-
+    final group = selectedGroup!;
+    final groupAdminName = group.members
+        ?.firstWhere(
+            (member) => group.admins?.contains(member.userId.id) ?? false)
+        .userId
+        .fullName;
+    final description = group.description;
+    final createdAtFormatted = DateFormat.yMMMd()
+        .format(DateTime.parse(group.createdAt ?? group.updatedAt ?? ''));
+    final totalMembers = group.members?.length ?? 0;
     return Column(
       mainAxisAlignment: MainAxisAlignment.end,
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -7179,220 +7251,211 @@ class _ChatScreenState extends State<ChatScreen>
             ],
           ),
         ),
-
-        // Group Info Card
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            SizedBox(height: 20),
-            Center(
-              child: Container(
-                margin: EdgeInsets.symmetric(horizontal: 7, vertical: 7),
-                padding: EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: AppColors.greyColor.withOpacity(0.4),
-                  ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        group.name,
-                        style: TextStyle(
-                          fontSize: 20,
-                          color: Theme.of(context).textTheme.bodyLarge?.color,
-                          fontFamily: AppFonts.opensansRegular,
-                          fontWeight: FontWeight.bold,
+        // Group Info Section
+        Padding(
+          padding: const EdgeInsets.only(left: 22.0, top: 8.0, bottom: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Card(
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 2, vertical: 12),
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
+                  color: Colors.teal,
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          group.name ?? "",
+                          style: const TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.bold),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        description,
-                        style: TextStyle(
-                            fontSize: 14,
-                            color: Theme.of(context).textTheme.bodyLarge?.color,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: AppFonts.opensansRegular),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Created At: $createdAtFormatted',
-                        style: TextStyle(
-                            fontSize: 16,
-                            color: Theme.of(context).textTheme.bodyLarge?.color,
-                            fontFamily: AppFonts.opensansRegular),
-                      ),
-                      Text(
-                        'Group Admin: $groupAdminName',
-                        style: TextStyle(
-                            fontSize: 16,
-                            color: Theme.of(context).textTheme.bodyLarge?.color,
-                            fontFamily: AppFonts.opensansRegular),
-                      ),
-                      Text(
-                        'Total Members: $totalMembers',
-                        style: TextStyle(
-                            color: Theme.of(context).textTheme.bodyLarge?.color,
-                            fontSize: 16,
-                            fontFamily: AppFonts.opensansRegular),
-                      ),
-                      const SizedBox(height: 8),
-                      if (isAdmin)
-                        Row(
-                          children: [
-                            const Icon(Icons.link, size: 18),
-                            const SizedBox(width: 4),
-                            GestureDetector(
-                              onTap: () async {
-                                if (inviteLink == null) {
-                                  await _generateInviteLink();
-                                }
-                                if (inviteLink != null) {
-                                  _showInviteLinkDialog();
-                                }
-                              },
-                              child: isGeneratingLink
-                                  ? Row(
-                                      children: [
-                                        SizedBox(
-                                          width: 16,
-                                          height: 16,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            valueColor:
-                                                AlwaysStoppedAnimation<Color>(
-                                              Theme.of(context).primaryColor,
+                        const SizedBox(height: 4),
+                        Text(
+                          description ?? 'no description',
+                          style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.black,
+                              fontFamily: AppFonts.opensansRegular),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Created At: $createdAtFormatted',
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontFamily: AppFonts.opensansRegular),
+                        ),
+                        Text(
+                          'Group Admin: $groupAdminName',
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontFamily: AppFonts.opensansRegular),
+                        ),
+                        Text(
+                          'Total Members: $totalMembers',
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontFamily: AppFonts.opensansRegular),
+                        ),
+                        const SizedBox(height: 8),
+                        if (isAdmin)
+                          Row(
+                            children: [
+                              const Icon(Icons.link, size: 18),
+                              const SizedBox(width: 4),
+                              GestureDetector(
+                                onTap: () async {
+                                  if (inviteLink == null) {
+                                    // Generate link first
+                                    await _generateInviteLink();
+                                  }
+
+                                  if (inviteLink != null) {
+                                    _showInviteLinkDialog();
+                                  }
+                                },
+                                child: isGeneratingLink
+                                    ? Row(
+                                        children: [
+                                          SizedBox(
+                                            width: 16,
+                                            height: 16,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              valueColor:
+                                                  AlwaysStoppedAnimation<Color>(
+                                                Theme.of(context).primaryColor,
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        const Text(
-                                          'Generating...',
-                                          style: TextStyle(
-                                            color: Colors.grey,
-                                            fontSize: 14,
+                                          const SizedBox(width: 8),
+                                          const Text(
+                                            'Generating...',
+                                            style: TextStyle(
+                                              color: Colors.grey,
+                                              fontSize: 14,
+                                            ),
                                           ),
+                                        ],
+                                      )
+                                    : Text(
+                                        inviteLink == null
+                                            ? 'Generate invite link'
+                                            : 'Share invite link',
+                                        style: TextStyle(
+                                          color: AppColors.redColor,
+                                          decoration: TextDecoration.underline,
                                         ),
-                                      ],
-                                    )
-                                  : Text(
-                                      inviteLink == null
-                                          ? 'Generate invite link'
-                                          : 'Share invite link',
-                                      style: TextStyle(
-                                        color: AppColors.redColor,
-                                        decoration: TextDecoration.underline,
                                       ),
-                                    ),
-                            ),
-                          ],
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            )
-          ],
-        ),
-
-        // Members list - UPDATED to use userInfo
-        Expanded(
-          child: ListView(
-            children: members.map((member) {
-              final userInfo = member.userInfo; // Use getter
-
-              return GestureDetector(
-                onTap: () => _showMemberOptionsDialog(context, member),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      vertical: 12.0, horizontal: 16.0),
-                  decoration: BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(color: Colors.grey[300]!, width: 0.5),
+                              ),
+                            ],
+                          ),
+                      ],
                     ),
                   ),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 24,
-                        backgroundColor: AppColors.greyColor,
-                        backgroundImage: (userInfo.avatar?.imageUrl != null &&
-                                userInfo.avatar!.imageUrl.trim().isNotEmpty)
-                            ? CachedNetworkImageProvider(
-                                userInfo.avatar!.imageUrl)
-                            : null,
-                        child: (userInfo.avatar?.imageUrl == null ||
-                                userInfo.avatar!.imageUrl.trim().isEmpty)
-                            ? Text(
-                                _getInitials(userInfo.fullName),
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : null,
-                      ),
-                      const SizedBox(width: 12.0),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  userInfo.fullName,
-                                  style: const TextStyle(
-                                    fontSize: 16.0,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                if (userInfo.id == currentUserId)
-                                  Container(
-                                    margin: const EdgeInsets.only(left: 8),
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: Colors.blue[100],
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Text(
-                                      'You',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.blue[800],
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                            const SizedBox(height: 4.0),
-                            Text(
-                              'Joined: ${DateFormat.yMMMd().format(DateTime.parse(member.joinedAt))}',
-                              style: TextStyle(
-                                fontSize: 14.0,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
+                ),
+              )
+            ],
+          ),
+        ),
+        // Members list
+        Expanded(
+          child: ListView(
+            children: groups
+                .firstWhere((e) => e.id == selectedGroup!.id)
+                .members!
+                .map(
+                  (member) => GestureDetector(
+                    onTap: () => _showMemberOptionsDialog(context, member),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 12.0, horizontal: 16.0),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom:
+                              BorderSide(color: Colors.grey[300]!, width: 0.5),
                         ),
                       ),
-                      Icon(
-                        Icons.chevron_right,
-                        color: Colors.grey[400],
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 24,
+                            backgroundImage: CacheImageLoader(
+                              member.userId.avatar?.imageUrl,
+                              ImageAssets.defaultProfileImg,
+                            ),
+                            child: member.userId.avatar?.imageUrl == null
+                                ? Text(
+                                    member.userId.fullName.isNotEmpty
+                                        ? member.userId.fullName[0]
+                                            .toUpperCase()
+                                        : '?',
+                                    style: const TextStyle(fontSize: 16),
+                                  )
+                                : null,
+                          ),
+                          const SizedBox(width: 12.0),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      member.userId.fullName,
+                                      style: const TextStyle(
+                                        fontSize: 16.0,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    if (member.userId.id == currentUserId)
+                                      Container(
+                                        margin: const EdgeInsets.only(left: 8),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: Colors.blue[100],
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                        ),
+                                        child: Text(
+                                          'Me',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.blue[800],
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4.0),
+                                Text(
+                                  'Joined: ${DateFormat.yMMMd().format(DateTime.parse(member.joinedAt.toString()))}',
+                                  style: TextStyle(
+                                    fontSize: 14.0,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(
+                            Icons.chevron_right,
+                            color: Colors.grey[400],
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              );
-            }).toList(),
+                )
+                .toList(),
           ),
         ),
       ],

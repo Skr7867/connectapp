@@ -78,6 +78,7 @@ class Participants {
   final String? sId;
   final String? fullName;
   final String? email;
+  final String? username;
   final Avatar? avatar;
   final String? id;
 
@@ -86,11 +87,14 @@ class Participants {
     this.subscriptionFeatures,
     this.status,
     this.sId,
+    this.username,
     this.fullName,
     this.email,
     this.avatar,
     this.id,
   });
+  String get mentionText =>
+      username ?? fullName!.toLowerCase().replaceAll(' ', '_');
 
   Participants copyWith({
     Subscription? subscription,

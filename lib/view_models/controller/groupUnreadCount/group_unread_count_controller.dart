@@ -139,7 +139,7 @@ class GroupUnreadCountController extends GetxController {
     final index = unreadGroupList.indexWhere((g) => g.id == groupId);
 
     if (index != -1) {
-      unreadGroupList[index].unreadCount++;
+      unreadGroupList[index].unreadCount;
       _sortGroupsByLastMessage();
       unreadGroupList.refresh();
     } else {
