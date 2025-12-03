@@ -14,24 +14,40 @@ import '../../../view_models/controller/userPreferences/user_preferences_screen.
 
 class CommentsBottomSheet extends StatelessWidget {
   final String clipId;
-  final CommentsController controller = Get.put(CommentsController());
-  final allFollowersController = Get.put(AllFollowersController());
-  final taggingController = Get.put(TaggingController());
-  CommentsBottomSheet({super.key, required this.clipId});
+  const CommentsBottomSheet({super.key, required this.clipId});
 
   @override
   Widget build(BuildContext context) {
+    final CommentsController controller = Get.find();
+    final AllFollowersController allFollowersController = Get.find();
+    final TaggingController taggingController = Get.find();
+    final TextEditingController commentInputController =
+        TextEditingController();
     controller.fetchComments(clipId);
-    void insertTagToInput(String username) {
-      String text = controller.commentText.value;
-      int cursorIndex = text.length;
-      int tagStart = text.lastIndexOf('@', cursorIndex - 1);
+    taggingController.hideTagList();
+    // IMPORTANT FIX: Ensure followers are loaded
+    if (allFollowersController.followers.isEmpty) {
+      allFollowersController.fetchFollowers();
+    }
 
-      if (tagStart != -1) {
-        String newText =
-            "${text.substring(0, tagStart + 1)}$username ${text.substring(cursorIndex)}";
+    void insertTagToInput(String username) {
+      String text = commentInputController.text;
+      int cursor = commentInputController.selection.baseOffset;
+
+      int lastAt = text.lastIndexOf('@', cursor - 1);
+
+      if (lastAt != -1) {
+        String newText = text.substring(0, lastAt + 1) +
+            username +
+            " " +
+            text.substring(cursor);
 
         controller.commentText.value = newText;
+        commentInputController.text = newText;
+        commentInputController.selection = TextSelection.fromPosition(
+          TextPosition(offset: (lastAt + username.length + 2)),
+        );
+
         taggingController.hideTagList();
       }
     }
@@ -129,6 +145,7 @@ class CommentsBottomSheet extends StatelessWidget {
                         ),
             ),
           ),
+          // TAGGING SUGGESTION LIST
           Obx(() {
             if (!taggingController.showTagList.value ||
                 taggingController.filteredFollowers.isEmpty) {
@@ -136,7 +153,7 @@ class CommentsBottomSheet extends StatelessWidget {
             }
 
             return Container(
-              height: 300,
+              height: 200,
               padding: const EdgeInsets.all(10),
               margin: EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -168,6 +185,7 @@ class CommentsBottomSheet extends StatelessWidget {
               ),
             );
           }),
+          // COMMENT INPUT
           Container(
             padding: EdgeInsets.only(
               left: 16,
@@ -180,63 +198,69 @@ class CommentsBottomSheet extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Expanded(child: Obx(() {
-                  return TextField(
-                    controller: TextEditingController(
-                        text: controller.commentText.value)
-                      ..selection = TextSelection.fromPosition(
+                Expanded(
+                  child: Obx(() {
+                    if (commentInputController.text !=
+                        controller.commentText.value) {
+                      commentInputController.text =
+                          controller.commentText.value;
+                      commentInputController.selection =
+                          TextSelection.fromPosition(
                         TextPosition(
-                            offset: controller.commentText.value.length),
-                      ),
-                    onChanged: (value) {
-                      controller.commentText.value = value;
-                      final cursorIndex = value.length;
+                            offset: commentInputController.text.length),
+                      );
+                    }
 
-                      // detect @
-                      int tagStart = value.lastIndexOf('@', cursorIndex - 1);
+                    return TextField(
+                      controller: commentInputController,
+                      onChanged: (value) {
+                        controller.commentText.value = value;
 
-                      if (tagStart != -1) {
-                        final tagText = value.substring(tagStart + 1);
+                        final cursorIndex =
+                            commentInputController.selection.baseOffset;
+                        if (cursorIndex < 0) return;
 
-                        // stop showing suggestions on space or empty
-                        if (tagText.contains(" ") || tagText.isEmpty) {
-                          taggingController.hideTagList();
+                        // Find last '@' before cursor
+                        int lastAt = value.lastIndexOf('@', cursorIndex - 1);
+
+                        if (lastAt != -1 && lastAt < cursorIndex) {
+                          // Extract text after @
+                          String tagText =
+                              value.substring(lastAt + 1, cursorIndex);
+
+                          if (tagText.contains(" ")) {
+                            taggingController.hideTagList();
+                          } else {
+                            // IMPORTANT FIX: Pass the followers list
+                            print(
+                                "Filtering with: '$tagText', Followers count: ${allFollowersController.followers.length}");
+                            taggingController.filterFollowers(
+                              tagText,
+                              allFollowersController.followers,
+                            );
+                          }
                         } else {
-                          taggingController.filterFollowers(
-                            tagText,
-                            allFollowersController.followers,
-                          );
+                          taggingController.hideTagList();
                         }
-                      } else {
-                        taggingController.hideTagList();
-                      }
-                    },
-                    onSubmitted: (_) => controller.sendComment(
-                      clipId,
-                      controller.commentText.value,
-                    ),
-                    decoration: InputDecoration(
-                      hintText: "Add a comment...",
-                      hintStyle: TextStyle(
-                        color: Theme.of(context).textTheme.bodyLarge?.color,
+                      },
+                      onSubmitted: (_) {
+                        controller.sendComment(
+                            clipId, controller.commentText.value);
+                      },
+                      decoration: InputDecoration(
+                        hintText: "Add a comment...",
+                        hintStyle: TextStyle(
+                          color: Theme.of(context).textTheme.bodyLarge?.color,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(25),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
                       ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(25),
-                        borderSide: BorderSide(color: Colors.grey[600]!),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(25),
-                        borderSide: BorderSide(color: Colors.grey[600]!),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(25),
-                        borderSide: BorderSide(color: Colors.grey),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
-                    ),
-                  );
-                })),
+                    );
+                  }),
+                ),
                 const SizedBox(width: 8),
                 Obx(() => GestureDetector(
                       onTap: controller.isSendingComment.value
@@ -360,7 +384,6 @@ class CommentsBottomSheet extends StatelessWidget {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    /// Profile Image
                     Container(
                       width: 40,
                       height: 40,
@@ -376,8 +399,6 @@ class CommentsBottomSheet extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 12),
-
-                    /// Username + Time + Delete Button
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -398,10 +419,7 @@ class CommentsBottomSheet extends StatelessWidget {
                                 style: TextStyle(
                                     color: Colors.grey[400], fontSize: 12),
                               ),
-
                               Spacer(),
-
-                              // SHOW DELETE ONLY IF THIS IS MY COMMENT
                               if (isMyComment)
                                 Obx(() {
                                   return IconButton(
@@ -429,12 +447,8 @@ class CommentsBottomSheet extends StatelessWidget {
                                 })
                             ],
                           ),
-
                           buildTaggedText(displayContent, context),
-
                           const SizedBox(height: 8),
-
-                          /// Like, Reply, Translate
                           Row(
                             children: [
                               Obx(() {
@@ -495,7 +509,6 @@ class CommentsBottomSheet extends StatelessWidget {
                                   isTranslating),
                             ],
                           ),
-
                           if (isTranslated || isTranslating)
                             _buildTranslationStatus(
                                 isTranslated, isTranslating),
@@ -504,8 +517,6 @@ class CommentsBottomSheet extends StatelessWidget {
                     ),
                   ],
                 ),
-
-                /// Replies section
                 if (replies.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(left: 52, top: 8),
@@ -534,7 +545,6 @@ class CommentsBottomSheet extends StatelessWidget {
     final replyId = reply['_id'];
 
     return Obx(() {
-      // Get translation state for reply - wrapped in Obx to observe changes
       final isTranslated = controller.isCommentTranslated(replyId);
       final isTranslating = controller.isCommentTranslating(replyId);
       final displayContent =
@@ -581,17 +591,14 @@ class CommentsBottomSheet extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 2),
-
                   buildTaggedText(displayContent, context),
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      // Translation button for reply
                       _buildReplyTranslationButton(controller, replyId, content,
                           isTranslated, isTranslating),
                     ],
                   ),
-                  // Translation status for reply
                   if (isTranslated || isTranslating)
                     _buildReplyTranslationStatus(isTranslated, isTranslating),
                 ],
@@ -603,12 +610,9 @@ class CommentsBottomSheet extends StatelessWidget {
     });
   }
 
-  /// Highlight tagged text like @username
   Widget buildTaggedText(String text, BuildContext context) {
     final allFollowersController = Get.find<AllFollowersController>();
-
     final RegExp tagRegex = RegExp(r'@\w+');
-
     List<InlineSpan> spans = [];
     int start = 0;
 
@@ -624,10 +628,9 @@ class CommentsBottomSheet extends StatelessWidget {
         );
       }
 
-      String tagText = match.group(0)!; // @john
+      String tagText = match.group(0)!;
       String cleanName = tagText.replaceFirst('@', '');
 
-      // 🔍 FIND USER FROM FOLLOWERS LIST
       final matchedUser = allFollowersController.followers.firstWhereOrNull(
         (item) => item.follower!.username == cleanName,
       );
@@ -674,7 +677,6 @@ class CommentsBottomSheet extends StatelessWidget {
     );
   }
 
-  // Translation button for main comments
   Widget _buildCommentTranslationButton(CommentsController controller,
       String commentId, String content, bool isTranslated, bool isTranslating) {
     return GestureDetector(
@@ -682,18 +684,14 @@ class CommentsBottomSheet extends StatelessWidget {
           ? null
           : () => controller.handleCommentTranslation(commentId, content),
       child: Container(
-        padding: const EdgeInsets.symmetric(
-            horizontal: 10, vertical: 6), // larger tappable area
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          // Always show a blue-accented button. Use a lighter blue bg when not translated,
-          // and slightly stronger blue when translated to indicate "Original" state.
           color: isTranslated
               ? Colors.blue.withOpacity(0.18)
               : Colors.blue.withOpacity(0.06),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: Colors
-                .blue, // keep border blue so it stands out on dark background
+            color: Colors.blue,
             width: 1,
           ),
         ),
@@ -712,7 +710,7 @@ class CommentsBottomSheet extends StatelessWidget {
                   Icon(
                     Icons.translate,
                     size: 14,
-                    color: isTranslated ? Colors.blue : Colors.blue,
+                    color: Colors.blue,
                   ),
                   const SizedBox(width: 6),
                   Text(
@@ -779,7 +777,6 @@ class CommentsBottomSheet extends StatelessWidget {
     );
   }
 
-  // Translation status indicator for main comments
   Widget _buildTranslationStatus(bool isTranslated, bool isTranslating) {
     return Padding(
       padding: const EdgeInsets.only(top: 4),
@@ -824,7 +821,6 @@ class CommentsBottomSheet extends StatelessWidget {
     );
   }
 
-  // Translation status indicator for replies
   Widget _buildReplyTranslationStatus(bool isTranslated, bool isTranslating) {
     return Padding(
       padding: const EdgeInsets.only(top: 2),

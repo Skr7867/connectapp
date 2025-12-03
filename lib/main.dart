@@ -24,6 +24,9 @@ import 'package:get_storage/get_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'view/message/applifecycle.dart';
 import 'view/message/chat_open_tracker.dart';
+import 'view_models/controller/TaggingInComment/tag_controller.dart';
+import 'view_models/controller/allFollowers/all_followers_controller.dart';
+import 'view_models/controller/getClipByid/comment_controller.dart';
 import 'view_models/controller/groupUnreadCount/group_unread_count_controller.dart';
 import 'view_models/controller/leaderboard/user_leaderboard_controller.dart';
 import 'view_models/controller/profile/user_profile_controller.dart';
@@ -66,6 +69,9 @@ Future<void> main() async {
   Get.put(UserLeaderboardController(), permanent: true);
   Get.put(UnreadCountController(), permanent: true);
   Get.put(GroupUnreadCountController(), permanent: true);
+  Get.put(AllFollowersController(), permanent: true);
+  Get.put(CommentsController(), permanent: true);
+  Get.put(TaggingController(), permanent: true);
   await NotificationMuteUtil.init();
 
   // Load saved locale

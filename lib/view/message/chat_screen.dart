@@ -1297,6 +1297,7 @@ class _ChatScreenState extends State<ChatScreen>
       receiverId: isGroup ? null : receiverId,
       groupId: isGroup ? selectedChatId : null,
       content: stickerUrl,
+      mentions: [],
       messageType: 'sticker',
       replyToMessageId:
           isReplying ? replyToMessageId : null, // Use stored value
@@ -2626,6 +2627,7 @@ class _ChatScreenState extends State<ChatScreen>
       groupId: isGroup ? selectedChatId : null,
       content: fileUrl,
       messageType: 'file',
+      mentions: [],
       replyToMessageId:
           isReplying ? replyToMessageId : null, // Use stored value
 
@@ -7534,7 +7536,7 @@ class _ChatScreenState extends State<ChatScreen>
       groupId: isGroup ? selectedChatId : null,
       content: formattedContent,
       replyToMessageId: isReplying ? replyToMessageId : null,
-      // mentions: mentions.map((m) => m['userId'] as String).toList(), // Add if socket supports
+      mentions: mentions.map((m) => m['userId'] as String).toList(),
       callback: (response) {
         _recentlySentMessages.remove(tempMessageId);
 

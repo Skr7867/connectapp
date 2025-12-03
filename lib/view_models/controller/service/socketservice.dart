@@ -642,10 +642,11 @@ class SocketService {
     Map<String, dynamic>? fileInfo,
     required Function(Map<String, dynamic>) callback,
     String? replyToMessageId,
+    required List<String> mentions,
   }) {
     log('📤 Sending message: senderId=$senderId, receiverId=$receiverId, groupId=$groupId');
 
-    // ✅ Use emitWithAck instead of emit + once
+    // Use emitWithAck instead of emit + once
     _socket?.emitWithAck('sendMessage', {
       'senderId': senderId,
       'receiverId': receiverId,

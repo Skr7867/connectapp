@@ -9,20 +9,25 @@ class TaggingController extends GetxController {
   void filterFollowers(String text, List<Followers> followers) {
     query.value = text;
 
+    // Show all followers when @ is typed without any text after it
     if (text.isEmpty) {
-      showTagList.value = false;
+      filteredFollowers.value = followers;
+      showTagList.value = followers.isNotEmpty;
       return;
     }
 
+    // Filter followers based on username
     filteredFollowers.value = followers
         .where((f) =>
-            f.follower!.username!.toLowerCase().contains(text.toLowerCase()))
+            f.follower?.username?.toLowerCase().contains(text.toLowerCase()) ??
+            false)
         .toList();
 
-    showTagList.value = true;
+    showTagList.value = filteredFollowers.isNotEmpty;
   }
 
   void hideTagList() {
     showTagList.value = false;
+    filteredFollowers.clear();
   }
 }
