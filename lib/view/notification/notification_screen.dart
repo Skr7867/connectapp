@@ -303,7 +303,7 @@ class NotificationTile extends StatelessWidget {
               final userId = data.fromUserId;
 
               // Validate userId before navigation
-              if (userId != null && userId.isNotEmpty && userId != 'null') {
+              if (userId != null && userId.isNotEmpty) {
                 Get.toNamed(RouteName.clipProfieScreen, arguments: userId);
               } else {
                 Get.snackbar(
@@ -317,7 +317,6 @@ class NotificationTile extends StatelessWidget {
                 message.contains('commented')) {
               // Comment Notification
               final clipId = data.clipId;
-
               if (clipId != null) {
                 Get.toNamed(RouteName.clipPlayScreen, arguments: clipId);
               } else {
@@ -332,11 +331,10 @@ class NotificationTile extends StatelessWidget {
               Get.toNamed(RouteName.clipPlayScreen, arguments: clipId);
             } else if (title.contains('clip uploaded')) {
               final clipId = data.clipId;
-              //  Clip Uploaded Notification
               Get.toNamed(RouteName.clipPlayScreen, arguments: clipId);
             } else {
               Get.toNamed(
-                RouteName.clipProfieScreen,
+                RouteName.profileScreen,
               );
             }
           } else if (type == 'avatar') {
@@ -347,8 +345,9 @@ class NotificationTile extends StatelessWidget {
             Get.toNamed(RouteName.profileScreen);
           } else if (type == 'level_up') {
             Get.toNamed(RouteName.profileScreen);
+          } else if (type == 'badge_earned') {
+            Get.toNamed(RouteName.profileScreen);
           } else {
-            //  Default fallback
             Get.snackbar(
               'Info',
               'Old Comment is Depricated',

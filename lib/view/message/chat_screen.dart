@@ -8933,14 +8933,53 @@ class _ChatScreenState extends State<ChatScreen>
     final status = otherUser?.status;
 
     String formatLastSeen(String? isoTime) {
-      if (isoTime == null) return "not active";
+      if (isoTime == null) return "Not active";
 
       final date = DateTime.parse(isoTime).toLocal();
+      final now = DateTime.now();
+
+      // Format time part → 10:20 AM
       final hour = date.hour % 12 == 0 ? 12 : date.hour % 12;
       final minute = date.minute.toString().padLeft(2, '0');
       final ampm = date.hour >= 12 ? "PM" : "AM";
+      final timeFormatted = "$hour:$minute $ampm";
 
-      return "$hour:$minute $ampm";
+      // Same day → "Last seen today at 10 AM"
+      if (date.year == now.year &&
+          date.month == now.month &&
+          date.day == now.day) {
+        return "today at $timeFormatted";
+      }
+
+      // Yesterday → "Last seen yesterday at 9 PM"
+      final yesterday = now.subtract(const Duration(days: 1));
+      if (date.year == yesterday.year &&
+          date.month == yesterday.month &&
+          date.day == yesterday.day) {
+        return " yesterday at $timeFormatted";
+      }
+
+      // Other days → "Last seen on 12 Jan at 8 PM"
+      final monthNames = [
+        "",
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec"
+      ];
+
+      final day = date.day;
+      final month = monthNames[date.month];
+
+      return "on $day $month at $timeFormatted";
     }
 
     if (selectedChatId == null || selectedChat == null) {

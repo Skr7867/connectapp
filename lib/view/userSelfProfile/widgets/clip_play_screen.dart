@@ -418,17 +418,17 @@ class ClipPlayScreen extends StatelessWidget {
     return Column(
       children: [
         _buildActionButton(
-          icon: Icons.favorite,
+          icon: Icons.favorite_border,
           color: clip.isLiked == true ? Colors.red : Colors.white,
-          // count: clip.likeCount?.toString() ?? "0",
+          count: clip.likeCount?.toString() ?? "0",
           onTap: () => controller.toggleLike(clip.sId!),
           size: size,
         ),
         SizedBox(height: size.height * 0.025),
         _buildActionButton(
-          icon: Icons.chat_bubble,
+          icon: Icons.chat_bubble_outline_rounded,
           color: Colors.white,
-          // count: clip.commentCount?.toString() ?? "0",
+          count: clip.commentCount?.toString() ?? "0",
           onTap: () {
             Get.bottomSheet(
               CommentsBottomSheet(clipId: clip.sId.toString()),
@@ -440,7 +440,7 @@ class ClipPlayScreen extends StatelessWidget {
         ),
         SizedBox(height: size.height * 0.025),
         _buildActionButton(
-          icon: Icons.repeat,
+          icon: Icons.repeat_rounded,
           color: clip.isReposted == true ? Colors.green : Colors.white,
           onTap: () => repostController.toggleRepostClip(clip.sId.toString()),
           size: size,
@@ -461,6 +461,7 @@ class ClipPlayScreen extends StatelessWidget {
     required Color color,
     required VoidCallback onTap,
     required Size size,
+    String count = "",
   }) {
     return Column(
       children: [
@@ -490,37 +491,37 @@ class ClipPlayScreen extends StatelessWidget {
             ),
           ),
         ),
-        // if (count.isNotEmpty) ...[
-        //   SizedBox(height: size.height * 0.005),
-        //   Text(
-        //     _formatCount(count),
-        //     style: TextStyle(
-        //       color: Colors.white,
-        //       fontSize: size.width * 0.032,
-        //       fontWeight: FontWeight.w600,
-        //       shadows: [
-        //         Shadow(
-        //           color: Colors.black.withOpacity(0.5),
-        //           offset: const Offset(0, 1),
-        //           blurRadius: 3,
-        //         ),
-        //       ],
-        //     ),
-        //   ),
-        // ],
+        if (count.isNotEmpty) ...[
+          SizedBox(height: size.height * 0.005),
+          Text(
+            _formatCount(count),
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: size.width * 0.032,
+              fontWeight: FontWeight.w600,
+              shadows: [
+                Shadow(
+                  color: Colors.black.withOpacity(0.5),
+                  offset: const Offset(0, 1),
+                  blurRadius: 3,
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }
 
-  // String _formatCount(String count) {
-  //   final num = int.tryParse(count) ?? 0;
-  //   if (num >= 1000000) {
-  //     return '${(num / 1000000).toStringAsFixed(1)}M';
-  //   } else if (num >= 1000) {
-  //     return '${(num / 1000).toStringAsFixed(1)}K';
-  //   }
-  //   return count;
-  // }
+  String _formatCount(String count) {
+    final num = int.tryParse(count) ?? 0;
+    if (num >= 1000000) {
+      return '${(num / 1000000).toStringAsFixed(1)}M';
+    } else if (num >= 1000) {
+      return '${(num / 1000).toStringAsFixed(1)}K';
+    }
+    return count;
+  }
 
   // Widget _buildMuteButton(ClipPlayController controller) {
   //   return Obx(() => GestureDetector(

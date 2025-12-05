@@ -39,6 +39,10 @@ class Clips {
   String? processedUrl;
   String? thumbnailKey;
   String? thumbnailUrl;
+  int? likeCount;
+  int? viewCount;
+  int? commentCount;
+
   List<Comments>? comments;
 
   Clips(
@@ -46,7 +50,10 @@ class Clips {
       this.userId,
       this.clipId,
       this.caption,
+      this.commentCount,
       this.tags,
+      this.likeCount,
+      this.viewCount,
       this.status,
       this.isPrivate,
       this.createdAt,
@@ -61,6 +68,9 @@ class Clips {
   Clips.fromJson(Map<String, dynamic> json) {
     sId = json['_id'];
     userId = json['userId'];
+    likeCount = json['likeCount'];
+    commentCount = json['commentCount'];
+    viewCount = json['viewCount'];
     clipId = json['clipId'];
     caption = json['caption'];
     tags = json['tags'].cast<String>();
@@ -85,7 +95,10 @@ class Clips {
     final Map<String, dynamic> data = <String, dynamic>{};
     data['_id'] = sId;
     data['userId'] = userId;
+    data['likeCount'] = likeCount;
+    data['viewCount'] = viewCount;
     data['clipId'] = clipId;
+    data['commentCount'] = commentCount;
     data['caption'] = caption;
     data['tags'] = tags;
     data['status'] = status;
@@ -110,7 +123,7 @@ class Comments {
   UserId? userId;
   String? content;
   String? parentCommentId;
-  List<String>? likes; // ✅ fix: no more Null type
+  List<String>? likes;
   String? createdAt;
   int? iV;
   List<Replies>? replies;
@@ -229,8 +242,7 @@ class UserId {
     sId = json['_id'];
     fullName = json['fullName'];
     username = json['username'];
-    avatar =
-        json['avatar'] != null ? Avatar.fromJson(json['avatar']) : null;
+    avatar = json['avatar'] != null ? Avatar.fromJson(json['avatar']) : null;
   }
 
   Map<String, dynamic> toJson() {

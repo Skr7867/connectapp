@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../data/response/status.dart';
 import '../../../res/assets/image_assets.dart';
-import '../../../res/routes/routes_name.dart'; // Ensure this is imported for navigation
+import '../../../res/routes/routes_name.dart';
 import '../../../view_models/controller/usersAllClips/users_all_clips_controller.dart';
 
 class UsersAllClipsWidgets extends StatelessWidget {
@@ -14,7 +14,6 @@ class UsersAllClipsWidgets extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final userClips = Get.put(UsersAllClipsController());
-
     return Obx(() {
       switch (userClips.rxRequestStatus.value) {
         case Status.LOADING:
@@ -78,8 +77,7 @@ class UsersAllClipsWidgets extends StatelessWidget {
                   children: [
                     // Thumbnail
                     ClipRRect(
-                      borderRadius:
-                          BorderRadius.circular(12), // Added rounded corners
+                      borderRadius: BorderRadius.circular(12),
                       child: imageUrl.isNotEmpty
                           ? InkWell(
                               onTap: () {
@@ -119,7 +117,6 @@ class UsersAllClipsWidgets extends StatelessWidget {
                               fit: BoxFit.cover,
                             ),
                     ),
-
                     // Play button center
                     Positioned.fill(
                       child: Align(
@@ -144,6 +141,43 @@ class UsersAllClipsWidgets extends StatelessWidget {
                         ),
                       ),
                     ),
+
+                    Positioned(
+                        left: 10,
+                        top: 168,
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.favorite,
+                              color: AppColors.whiteColor,
+                              size: 11,
+                            ),
+                            SizedBox(width: 3),
+                            Text(
+                              clip.likeCount.toString(),
+                              style: TextStyle(
+                                  color: AppColors.whiteColor, fontSize: 10),
+                            ),
+                            SizedBox(width: 5),
+                            Icon(Icons.remove_red_eye,
+                                size: 11, color: AppColors.whiteColor),
+                            SizedBox(width: 3),
+                            Text(
+                              clip.viewCount.toString(),
+                              style: TextStyle(
+                                  color: AppColors.whiteColor, fontSize: 10),
+                            ),
+                            SizedBox(width: 5),
+                            Icon(Icons.comment,
+                                size: 11, color: AppColors.whiteColor),
+                            SizedBox(width: 3),
+                            Text(
+                              clip.commentCount.toString(),
+                              style: TextStyle(
+                                  color: AppColors.whiteColor, fontSize: 10),
+                            ),
+                          ],
+                        ))
                   ],
                 );
               },

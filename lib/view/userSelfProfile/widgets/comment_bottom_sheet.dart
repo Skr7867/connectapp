@@ -23,6 +23,18 @@ class CommentsBottomSheet extends StatelessWidget {
     final TaggingController taggingController = Get.find();
     final TextEditingController commentInputController =
         TextEditingController();
+    String _getInitials(String name) {
+      if (name.trim().isEmpty) return "";
+
+      List<String> parts = name.trim().split(" ");
+      if (parts.length == 1) {
+        return parts.first.substring(0, 2).toUpperCase();
+      } else {
+        return (parts[0].substring(0, 1) + parts[1].substring(0, 1))
+            .toUpperCase();
+      }
+    }
+
     controller.fetchComments(clipId);
     taggingController.hideTagList();
     // IMPORTANT FIX: Ensure followers are loaded
@@ -157,7 +169,7 @@ class CommentsBottomSheet extends StatelessWidget {
               padding: const EdgeInsets.all(10),
               margin: EdgeInsets.all(20),
               decoration: BoxDecoration(
-                  color: const Color.fromARGB(255, 188, 227, 247),
+                  color: Theme.of(context).scaffoldBackgroundColor,
                   border: Border.all(
                     color: AppColors.greyColor.withOpacity(0.4),
                   ),
@@ -168,9 +180,23 @@ class CommentsBottomSheet extends StatelessWidget {
                   final follower = taggingController.filteredFollowers[index];
                   return ListTile(
                     leading: CircleAvatar(
-                      backgroundImage: NetworkImage(
-                        follower.follower!.avatar?.imageUrl ?? "",
-                      ),
+                      backgroundColor: AppColors.greyColor,
+                      backgroundImage: (follower.follower!.avatar?.imageUrl !=
+                                  null &&
+                              follower.follower!.avatar!.imageUrl!.isNotEmpty)
+                          ? NetworkImage(follower.follower!.avatar!.imageUrl!)
+                          : null,
+                      child: (follower.follower!.avatar?.imageUrl == null ||
+                              follower.follower!.avatar!.imageUrl!.isEmpty)
+                          ? Text(
+                              _getInitials(
+                                  follower.follower!.fullName.toString()),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            )
+                          : null,
                     ),
                     title: Text(
                       "@${follower.follower!.username}",

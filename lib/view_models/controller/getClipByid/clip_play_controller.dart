@@ -44,9 +44,9 @@ class ClipPlayController extends GetxController with WidgetsBindingObserver {
         looping: true,
         showControls: true,
         showOptions: false,
-        aspectRatio: 9 / 16,
+        // aspectRatio: 9 / 16,
         allowMuting: true,
-        allowFullScreen: false,
+        allowFullScreen: true,
         customControls: const InstagramControls(),
       );
       videoPlayerController.value!.play();
