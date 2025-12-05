@@ -128,11 +128,7 @@ class _ChatScreenState extends State<ChatScreen>
       TextEditingController();
   List<Chat> filteredDirectChats = [];
   Map<String, List<Message>> messages = {};
-
   String otherId = "";
-
-  // late ChatController _chatController;
-
   Set<String> joinedGroups = {};
   String? inviteLink;
   bool isGeneratingLink = false;
@@ -159,7 +155,7 @@ class _ChatScreenState extends State<ChatScreen>
   late AnimationController _animationController;
   bool _isLoadingOlderMessages = false;
   final Map<String, bool> _hasMoreMessages = {};
-  final Map<String, String?> _oldestMessageId = {};
+  // final Map<String, String?> _oldestMessageId = {};
   late Animation<double> _fadeAnimation;
   Message? replyingToMessage;
   StreamSubscription<Map<String, dynamic>>? _groupDeletedSubscription;
@@ -177,7 +173,6 @@ class _ChatScreenState extends State<ChatScreen>
   late StreamSubscription _pinnedMessageSubscription;
   StreamSubscription? _messagesReadSubscription;
   bool _showMentionSheet = false;
-  String _mentionQuery = '';
   String _currentMentionQuery = '';
   List<GroupMember> _filteredMentions = [];
   int _mentionStartPosition = -1;
@@ -258,9 +253,9 @@ class _ChatScreenState extends State<ChatScreen>
   ];
 
   //imageuploadingstartsfromhere
-  final ImagePicker _picker = ImagePicker();
-  File? _selectedImage;
-  String? _uploadedImageUrl;
+  // final ImagePicker _picker = ImagePicker();
+  // File? _selectedImage;
+  // String? _uploadedImageUrl;
   bool _isUploading = false;
   double _uploadProgress = 0.0;
   List<Message> pinnedMessages = [];
@@ -317,36 +312,6 @@ class _ChatScreenState extends State<ChatScreen>
     });
   }
 
-  // void _selectMention(Participant participant) {
-  //   final text = _messageController.text;
-  //   final cursorPosition = _messageController.selection.baseOffset;
-
-  //   // Replace from @ to cursor with the mention
-  //   final beforeMention = text.substring(0, _mentionStartPosition);
-  //   final afterCursor = text.substring(cursorPosition);
-
-  //   final mentionText = '@${participant.name}';
-  //   final newText = '$beforeMention$mentionText $afterCursor';
-
-  //   // Store mention info for later processing
-  //   _mentionsInMessage.add({
-  //     'userId': participant.id,
-  //     'userName': participant.name,
-  //     'startIndex': _mentionStartPosition,
-  //     'endIndex': _mentionStartPosition + mentionText.length,
-  //   });
-
-  //   _messageController.text = newText;
-  //   _messageController.selection = TextSelection.fromPosition(
-  //     TextPosition(offset: beforeMention.length + mentionText.length + 1),
-  //   );
-
-  //   setState(() {
-  //     _showMentionSheet = false;
-  //     _currentMentionQuery = '';
-  //     _filteredMentions = [];
-  //   });
-  // }
   void _selectMention(GroupMember participant) {
     final text = _messageController.text;
     final cursorPosition = _messageController.selection.baseOffset;
@@ -378,53 +343,6 @@ class _ChatScreenState extends State<ChatScreen>
       _filteredMentions = [];
     });
   }
-
-// Add this method after _selectMention
-  // List<Map<String, dynamic>> _extractMentionsFromText(String text) {
-  //   final mentions = <Map<String, dynamic>>[];
-  //   final groupMembers = _getGroupMembersForMention();
-
-  //   // Find all @ symbols
-  //   int index = 0;
-  //   while (index < text.length) {
-  //     final atIndex = text.indexOf('@', index);
-  //     if (atIndex == -1) break;
-  //     int endIndex = atIndex + 1;
-  //     while (endIndex < text.length) {
-  //       final char = text[endIndex];
-  //       // Stop at space, newline, or common punctuation
-  //       if (char == ' ' ||
-  //           char == '\n' ||
-  //           char == ',' ||
-  //           char == '.' ||
-  //           char == '!' ||
-  //           char == '?') {
-  //         break;
-  //       }
-  //       endIndex++;
-  //     }
-
-  //     final mentionText = text.substring(atIndex + 1, endIndex);
-
-  //     // Try to match with a group member
-  //     final participant = groupMembers.firstWhereOrNull(
-  //       (p) => p.userId.username == mentionText.toLowerCase(),
-  //     );
-
-  //     if (participant != null) {
-  //       mentions.add({
-  //         'userId': participant.id,
-  //         'userName': participant.userId.username,
-  //         'startIndex': atIndex,
-  //         'endIndex': endIndex,
-  //       });
-  //     }
-
-  //     index = endIndex;
-  //   }
-
-  //   return mentions;
-  // }
 
   List<Map<String, dynamic>> _extractMentionsFromText(String text) {
     final mentions = <Map<String, dynamic>>[];
@@ -9327,27 +9245,14 @@ class _ChatScreenState extends State<ChatScreen>
                       top: 0,
                       left: 0,
                       right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.9),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: const Center(
-                          child: SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.blue),
-                            ),
+                      child: const Center(
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.blue),
                           ),
                         ),
                       ),

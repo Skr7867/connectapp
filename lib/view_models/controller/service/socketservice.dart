@@ -676,12 +676,12 @@ class SocketService {
           callback({'success': false, 'message': 'No response from server'});
         }
       } catch (e) {
-        log('❌ Error processing sendMessage response: $e');
+        log(' Error processing sendMessage response: $e');
         callback({'success': false, 'message': e.toString()});
       }
     });
 
-    // ✅ Add timeout protection
+    //  Add timeout protection
     Timer(Duration(seconds: 10), () {
       log('⚠️ sendMessage timeout - no response received');
     });
