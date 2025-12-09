@@ -121,6 +121,6 @@ class UnreadCountController extends GetxController {
       unreadCountList.refresh();
     }
 
-    log("🧹 Cleared unread → $chatId");
+    log("Cleared unread → $chatId");
   }
 }

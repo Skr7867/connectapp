@@ -76,34 +76,34 @@ class SocketService {
   Stream<Map<String, dynamic>> get adminAddedStream =>
       _adminAddedController.stream;
 
-  // ✅ NEW: Initialize SharedPreferences
+  // Initialize SharedPreferences
   Future<void> _initPrefs() async {
     _prefs ??= await SharedPreferences.getInstance();
   }
 
-  // ✅ NEW: Save unread count to persistent storage
+  // NEW: Save unread count to persistent storage
   Future<void> _saveUnreadCount(String chatId, int count) async {
     await _initPrefs();
     await _prefs?.setInt('unread_$chatId', count);
-    log('💾 Saved unread count for $chatId: $count');
+    log(' Saved unread count for $chatId: $count');
   }
 
-  // ✅ NEW: Get unread count from persistent storage
+  //  Get unread count from persistent storage
   Future<int> getUnreadCount(String chatId) async {
     await _initPrefs();
     final count = _prefs?.getInt('unread_$chatId') ?? 0;
-    log('📖 Retrieved unread count for $chatId: $count');
+    log(' Retrieved unread count for $chatId: $count');
     return count;
   }
 
-  // ✅ NEW: Clear unread count
+  //  Clear unread count
   Future<void> clearUnreadCount(String chatId) async {
     await _initPrefs();
     await _prefs?.remove('unread_$chatId');
     log('🗑️ Cleared unread count for $chatId');
   }
 
-  // ✅ NEW: Get all unread counts
+  // Get all unread counts
   Future<Map<String, int>> getAllUnreadCounts() async {
     await _initPrefs();
     final keys = _prefs?.getKeys() ?? {};
@@ -123,13 +123,13 @@ class SocketService {
     return unreadCounts;
   }
 
-  // ✅ NEW: Save last message timestamp for sorting
+  // Save last message timestamp for sorting
   Future<void> _saveLastMessageTime(String chatId, int timestamp) async {
     await _initPrefs();
     await _prefs?.setInt('lastmsg_$chatId', timestamp);
   }
 
-  // ✅ NEW: Get last message timestamp
+  //  Get last message timestamp
   Future<int> getLastMessageTime(String chatId) async {
     await _initPrefs();
     return _prefs?.getInt('lastmsg_$chatId') ?? 0;
@@ -183,8 +183,8 @@ class SocketService {
 
       // Debug: log every event the socket receives
       _socket?.onAny((event, data) {
-        log("🔥 EVENT: $event");
-        log("📦 DATA: $data");
+        log(" EVENT: $event");
+        log("DATA: $data");
       });
 
       // Register all existing listeners
@@ -315,7 +315,7 @@ class SocketService {
         }
       });
 
-      // ✅ ENHANCED: Handle read receipts with persistence
+      // Handle read receipts with persistence
       _socket?.on('messagesRead', (data) async {
         try {
           final readData = Map<String, dynamic>.from(data);
@@ -353,12 +353,12 @@ class SocketService {
     }
   }
 
-  // ✅ NEW: Request all unread counts on reconnection
+  // Request all unread counts on reconnection
   void _requestAllUnreadCounts(String userId) {
     _socket?.emit('getAllUnreadCounts', {'userId': userId});
   }
 
-  // ✅ ENHANCED: Mark messages as read with persistence
+  //  Mark messages as read with persistence
   void markMessagesAsRead({
     required String chatId,
     required String userId,

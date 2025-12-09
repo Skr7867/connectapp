@@ -4425,7 +4425,7 @@ class _ChatScreenState extends State<ChatScreen>
         return;
       }
 
-      ///Show loading
+      //Show loading
       if (mounted) setState(() => loading = true);
 
       // Join private room

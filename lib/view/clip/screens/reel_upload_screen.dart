@@ -3260,7 +3260,7 @@ class _AddCaptionPageState extends State<AddCaptionPage> {
       // Show error notification
       Get.snackbar(
         'Upload Failed',
-        'Failed to upload clip: ${e.toString()}',
+        'Failed to upload clip}',
         snackPosition: SnackPosition.TOP,
         backgroundColor: Colors.red,
         colorText: Colors.white,
