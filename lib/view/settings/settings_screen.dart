@@ -94,10 +94,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 SizedBox(height: screenHeight * 0.01),
                 membershipTile(),
                 const SizedBox(height: 20),
-                sectionTitle(Icons.notifications_rounded, "notification".tr),
-                SizedBox(height: screenHeight * 0.01),
-                notificationSettings(),
-                const SizedBox(height: 20),
+                // sectionTitle(Icons.notifications_rounded, "notification".tr),
+                // SizedBox(height: screenHeight * 0.01),
+                // notificationSettings(),
                 sectionTitle(
                     PhosphorIconsFill.shieldCheck, 'privacy_security'.tr),
                 SizedBox(height: screenHeight * 0.01),
@@ -168,7 +167,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onTap: () {
               Get.bottomSheet(
                 Container(
-                  margin: EdgeInsets.only(bottom: 40),
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: Theme.of(context).scaffoldBackgroundColor,
@@ -241,45 +239,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget notificationSettings() {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: AppColors.greyColor.withOpacity(0.4)),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
-          // _buildNotificationSwitchTile(
-          //   icon: PhosphorIconsRegular.bellSimple,
-          //   title: 'push_notification'.tr,
-          //   value: _pushNotifications,
-          //   onChanged: (val) => setState(() => _pushNotifications = val),
-          // ),
-          // _buildDivider(),
-          _buildNotificationSwitchTile(
-            icon: PhosphorIconsRegular.envelope,
-            title: 'email_notification'.tr,
-            value: _emailNotifications,
-            onChanged: (val) => setState(() => _emailNotifications = val),
-          ),
-          _buildDivider(),
-          _buildNotificationSwitchTile(
-            icon: PhosphorIconsRegular.chatCircle,
-            title: 'chat_notification'.tr,
-            value: _chatNotifications,
-            onChanged: (val) => setState(() => _chatNotifications = val),
-          ),
-          _buildDivider(),
-          _buildNotificationSwitchTile(
-            icon: PhosphorIconsRegular.bookOpen,
-            title: 'course_update'.tr,
-            value: _courseUpdates,
-            onChanged: (val) => setState(() => _courseUpdates = val),
-          ),
-        ],
-      ),
-    );
-  }
+  // Widget notificationSettings() {
+  //   return Container(
+  //     decoration: BoxDecoration(
+  //       border: Border.all(color: AppColors.greyColor.withOpacity(0.4)),
+  //       borderRadius: BorderRadius.circular(16),
+  //     ),
+  //     child: Column(
+  //       children: [
+  //         // _buildNotificationSwitchTile(
+  //         //   icon: PhosphorIconsRegular.bellSimple,
+  //         //   title: 'push_notification'.tr,
+  //         //   value: _pushNotifications,
+  //         //   onChanged: (val) => setState(() => _pushNotifications = val),
+  //         // ),
+  //         // _buildDivider(),
+  //         _buildNotificationSwitchTile(
+  //           icon: PhosphorIconsRegular.envelope,
+  //           title: 'email_notification'.tr,
+  //           value: _emailNotifications,
+  //           onChanged: (val) => setState(() => _emailNotifications = val),
+  //         ),
+  //         _buildDivider(),
+  //         _buildNotificationSwitchTile(
+  //           icon: PhosphorIconsRegular.chatCircle,
+  //           title: 'chat_notification'.tr,
+  //           value: _chatNotifications,
+  //           onChanged: (val) => setState(() => _chatNotifications = val),
+  //         ),
+  //         _buildDivider(),
+  //         _buildNotificationSwitchTile(
+  //           icon: PhosphorIconsRegular.bookOpen,
+  //           title: 'course_update'.tr,
+  //           value: _courseUpdates,
+  //           onChanged: (val) => setState(() => _courseUpdates = val),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   Widget privacySecuritySettings() {
     return Container(

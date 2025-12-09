@@ -21,7 +21,7 @@
         android:usesCleartextTraffic="true"
         android:requestLegacyExternalStorage="true">
 
-        <!-- ✅ Main Activity -->
+        <!--Main Activity -->
         <activity
     android:name=".MainActivity"
     android:exported="true"
@@ -47,6 +47,9 @@
         <data android:scheme="connectapp" android:host="register" />
         <data android:scheme="connectapp" android:host="clip" />
         <data android:scheme="connectapp" android:host="course" />
+            <!-- ADD THESE TWO FOR REFERRAL -->
+        <data android:scheme="https" android:host="connectapp.cc" android:pathPrefix="/ref" />
+        <data android:scheme="https" android:host="connectapp.cc" android:pathPrefix="/register" />
         
         <!-- HTTPS scheme -->
         <data android:scheme="https" android:host="connectapp.cc" android:pathPrefix="/clip" />

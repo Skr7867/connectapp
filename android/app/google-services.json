@@ -14,11 +14,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "35673142221-rabs812krb0b8bbs5070bb0oenepb97m.apps.googleusercontent.com",
+          "client_id": "35673142221-nvtebgd9d42ih7r07o0oa95nmmvt6afv.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "app.connectapp.com",
-            "certificate_hash": "5b0009460b342f79c64091b4609fe79fd734f6ca"
+            "certificate_hash": "5f60dc7c21c2436283c7619b2c0c74a7ef1613a1"
           }
         },
         {
@@ -39,10 +39,10 @@
               "client_type": 3
             },
             {
-              "client_id": "35673142221-f604bsre8seak7s3ip8mlcpnatcfu0ob.apps.googleusercontent.com",
+              "client_id": "35673142221-quhpntesgr4hm7jgilscf56seo0k79ki.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.example.connectapp"
+                "bundle_id": "app.connectapp.com"
               }
             }
           ]

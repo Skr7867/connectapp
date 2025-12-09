@@ -71,13 +71,13 @@ class UserAvatarController extends GetxController {
           imageUrl: selectedAvatar.imageUrl,
         );
         await fetchUserAvatars(isRefresh: true);
-        Get.snackbar(
-          'Success',
-          'Avatar changed successfully!',
-          snackPosition: SnackPosition.TOP,
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
-        );
+        // Get.snackbar(
+        //   'Success',
+        //   'Avatar changed successfully!',
+        //   snackPosition: SnackPosition.TOP,
+        //   backgroundColor: Colors.green,
+        //   colorText: Colors.white,
+        // );
         return true;
       } else {
         Get.snackbar(
@@ -93,12 +93,11 @@ class UserAvatarController extends GetxController {
       String errorMessage = 'Failed to change avatar';
       if (e.response?.statusCode == 401) {
         errorMessage = 'Authentication failed. Please log in again.';
-        Get.offAllNamed('/login');
       } else {
         errorMessage = e.message ?? 'Failed to change avatar';
       }
       Get.snackbar(
-        'Error',
+        'Info',
         errorMessage,
         snackPosition: SnackPosition.TOP,
         backgroundColor: Colors.red,
@@ -108,7 +107,7 @@ class UserAvatarController extends GetxController {
       return false;
     } catch (e) {
       Get.snackbar(
-        'Error',
+        'Info',
         'An unexpected error occurred: $e',
         snackPosition: SnackPosition.TOP,
         backgroundColor: Colors.red,

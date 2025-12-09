@@ -22,6 +22,8 @@ import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uni_links5/uni_links.dart';
+
 import 'view/message/applifecycle.dart';
 import 'view/message/chat_open_tracker.dart';
 import 'view_models/controller/TaggingInComment/tag_controller.dart';
@@ -34,14 +36,10 @@ import 'view_models/controller/unreadCount/unread_count_controller.dart';
 
 bool isDeepLinkHandled = false;
 String? lastMessageId;
+
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  if (message.notification != null) {
-    log("System notification already shown -> Skipping custom notification");
-    return;
-  }
-
   NotificationService().showNotification(message);
 }
 
@@ -51,15 +49,18 @@ Future<void> main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await NotificationService().initialize();
   await GetStorage.init();
+
+  // ⭐ HANDLE REFERRAL BEFORE ANYTHING ELSE
+  await _initReferralDeepLinks();
+
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-  // Stripe setup
   Stripe.publishableKey = Myconst.publicKey;
   await Stripe.instance.applySettings();
 
-  // Shared preferences and GetX controllers
   SharedPreferences prefs = await SharedPreferences.getInstance();
   Get.put(prefs);
+
   Get.put(NotificationController(), permanent: true);
   Get.put(RepostClipController(), permanent: true);
   Get.put(UserAvatarController(), permanent: true);
@@ -74,17 +75,49 @@ Future<void> main() async {
   Get.put(TaggingController(), permanent: true);
   await NotificationMuteUtil.init();
 
-  // Load saved locale
   String? languageCode = prefs.getString('language_code');
   String? countryCode = prefs.getString('country_code');
+
   Locale savedLocale = (languageCode != null && countryCode != null)
       ? Locale(languageCode, countryCode)
       : const Locale('en', 'US');
+
   RemoteMessage? initialMessage =
       await FirebaseMessaging.instance.getInitialMessage();
+
   BackgroundService.initialize();
 
   runApp(MyApp(savedLocale, initialMessage: initialMessage));
+}
+
+Future<void> _initReferralDeepLinks() async {
+  final initialUri = await getInitialUri();
+
+  if (initialUri != null) {
+    final ref = initialUri.queryParameters['ref'];
+    if (ref != null && ref.isNotEmpty) {
+      final prefs = await SharedPreferences.getInstance();
+      prefs.setString("referralCode", ref);
+      log("Referral Saved (cold start): $ref");
+      Future.microtask(() {
+        Get.offAllNamed(RouteName.signupScreen);
+      });
+    }
+  }
+
+  // App already running
+  uriLinkStream.listen((uri) async {
+    if (uri != null) {
+      final ref = uri.queryParameters['ref'];
+      if (ref != null && ref.isNotEmpty) {
+        final prefs = await SharedPreferences.getInstance();
+        prefs.setString("referralCode", ref);
+        log("Referral Saved (stream): $ref");
+
+        Get.offAllNamed(RouteName.signupScreen);
+      }
+    }
+  });
 }
 
 class MyApp extends StatefulWidget {

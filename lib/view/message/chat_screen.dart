@@ -599,6 +599,16 @@ class _ChatScreenState extends State<ChatScreen>
     }
   }
 
+  void _clearReplyState() {
+    setState(() {
+      replyingToMessage = null;
+      showReplyPreview = false;
+      // Also clear editing state to be safe
+      _isEditingMode = false;
+      _editingMessage = null;
+    });
+  }
+
   Future<void> _translateMessage(Message message) async {
     // Don't translate own messages
     if (message.sender.id == currentUserId) {
@@ -6479,7 +6489,7 @@ class _ChatScreenState extends State<ChatScreen>
       log("⚠️ Chat not found...");
       return;
     }
-
+    _clearReplyState();
     if (chat.isGroup) {
       groupUnreadController.clearUnread(chatId);
     } else {
@@ -6564,10 +6574,9 @@ class _ChatScreenState extends State<ChatScreen>
       }
     }
 
-    // ✅ FIXED: Ensure scroll to bottom for all chats (groups and direct)
+    // FIXED: Ensure scroll to bottom for all chats (groups and direct)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _sortChatsSafely();
-
       // Use multiple frame callbacks to ensure ListView is ready
       WidgetsBinding.instance.addPostFrameCallback((_) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -9026,10 +9035,13 @@ class _ChatScreenState extends State<ChatScreen>
                         Icons.arrow_back,
                         color: Theme.of(context).textTheme.bodyLarge?.color,
                       ),
-                      onPressed: () => setState(() {
-                        showChatList = true;
-                        selectedChatId = null;
-                      }),
+                      onPressed: () {
+                        _clearReplyState();
+                        setState(() {
+                          showChatList = true;
+                          selectedChatId = null;
+                        });
+                      },
                     ),
                   InkWell(
                     onTap: () {

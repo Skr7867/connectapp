@@ -139,7 +139,7 @@ class UserProfileContainerWidget extends StatelessWidget {
               child: ClipOval(
                 child: isError || imageUrl == null || imageUrl.isEmpty
                     ? Image.asset(
-                        ImageAssets.profileIcon,
+                        ImageAssets.defaultProfileImg,
                         fit: BoxFit.cover,
                       )
                     : CachedNetworkImage(
@@ -154,7 +154,7 @@ class UserProfileContainerWidget extends StatelessWidget {
                           ),
                         ),
                         errorWidget: (context, url, error) => Image.asset(
-                          ImageAssets.profileIcon,
+                          ImageAssets.defaultProfileImg,
                           fit: BoxFit.cover,
                         ),
                       ),

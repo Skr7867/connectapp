@@ -35,7 +35,6 @@ class SignupController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    initDeepLinks();
     _loadReferralCode();
   }
 
@@ -109,13 +108,13 @@ class SignupController extends GetxController {
   Future<void> shareReferralLink() async {
     try {
       final referralCode = await fetchReferralCode();
-      final link =
-          'https://connect-frontend-1ogx.onrender.com/app/register?ref=$referralCode';
-      // 'https://play.google.com/store/apps/details?id=app.connectapp.com&pcampaignid=web_share$referralCode';
 
-      // log('Sharing link: $link');
+      final link = "https://connectapp.cc/ref?ref=$referralCode";
+      final playStoreLink =
+          "https://play.google.com/store/apps/details?id=app.connectapp.com&pcampaignid=web_share";
+
       await Share.share(
-        'Join my app using my referral link: $link',
+        'Join my app using my referral link: $link                                         if you dont have app then download from here $playStoreLink',
         subject: 'Invite to Join',
       );
     } catch (e) {
@@ -127,25 +126,18 @@ class SignupController extends GetxController {
   StreamSubscription? _sub;
 
   void initDeepLinks() {
-    _sub = uriLinkStream.listen(
-      (Uri? uri) {
-        if (uri != null &&
-            uri.host == ApiUrls.baseUrl &&
-            uri.path == '/app/register') {
-          final refCode = uri.queryParameters['ref'];
-          if (refCode != null) {
-            saveReferralCode(refCode);
-            Get.toNamed(RouteName.signupScreen);
-          }
+    _sub = uriLinkStream.listen((Uri? uri) {
+      if (uri != null) {
+        final refCode = uri.queryParameters['ref'];
+        if (refCode != null) {
+          saveReferralCode(refCode);
+          Get.toNamed(RouteName.signupScreen);
         }
-      },
-    );
+      }
+    });
 
-    // Handle initial link
     getInitialUri().then((uri) {
-      if (uri != null &&
-          uri.host == 'connect-frontend-1ogx.onrender.com' &&
-          uri.path == '/app/register') {
+      if (uri != null) {
         final refCode = uri.queryParameters['ref'];
         if (refCode != null) {
           saveReferralCode(refCode);

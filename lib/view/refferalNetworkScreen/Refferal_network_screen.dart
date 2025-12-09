@@ -1,4 +1,5 @@
 import 'package:connectapp/res/color/app_colors.dart';
+import 'package:connectapp/res/custom_widgets/custome_appbar.dart';
 import 'package:connectapp/res/fonts/app_fonts.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -21,7 +22,10 @@ class ReferralNetworkScreen extends StatelessWidget {
     // double screenWidth = MediaQuery.of(context).size.width;
     // Orientation orientation = MediaQuery.of(context).orientation;
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A2E),
+      appBar: CustomAppBar(
+        title: 'Your Refferals',
+        automaticallyImplyLeading: true,
+      ),
       body: Obx(() {
         if (controller.rxRequestStatus.value == Status.LOADING) {
           return const Center(child: CircularProgressIndicator());
@@ -122,26 +126,56 @@ class ReferralNetworkScreen extends StatelessWidget {
                 },
                 icon: imageUrl?.isNotEmpty == true
                     ? Container(
-                        padding: EdgeInsets.all(8),
+                        width: 50,
+                        height: 50,
                         decoration: BoxDecoration(
-                          color: Colors.blue,
                           shape: BoxShape.circle,
                           border: Border.all(
-                              color: AppColors.buttonColor, width: 4),
+                            color: AppColors.buttonColor,
+                            width: 2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 4,
+                              spreadRadius: 1,
+                            ),
+                          ],
                         ),
-                        child: Image.network(
-                          imageUrl!,
-                          fit: BoxFit.cover,
-                          width: 50,
-                          height: 50,
+                        child: ClipOval(
+                          child: Image.network(
+                            imageUrl!,
+                            fit: BoxFit.cover, // Changed from contain to cover
+                            width: double.infinity, // Fill container
+                            height: double.infinity, // Fill container
+                            errorBuilder: (context, error, stackTrace) =>
+                                Container(
+                              color: Colors.blue,
+                              child: const Icon(
+                                Icons.person,
+                                color: Colors.white,
+                                size: 30,
+                              ),
+                            ),
+                          ),
                         ),
                       )
-                    : Image.asset(
-                        color: Theme.of(context).textTheme.bodyLarge?.color,
-                        ImageAssets.profileIcon,
-                        fit: BoxFit.cover,
-                        width: 25,
-                        height: 25,
+                    : Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppColors.buttonColor.withOpacity(0.3),
+                          border: Border.all(
+                            color: AppColors.buttonColor,
+                            width: 1,
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.person,
+                          color: Theme.of(context).textTheme.bodyLarge?.color,
+                          size: 30,
+                        ),
                       ),
               );
           }
