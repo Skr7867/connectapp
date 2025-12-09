@@ -422,7 +422,7 @@ class EditProfileScreen extends StatelessWidget {
               fontSize: 15,
             ),
             decoration: InputDecoration(
-              hintText: 'your.email@example.com',
+              // hintText: 'your.email@example.com',
               hintStyle: TextStyle(
                 color: Theme.of(context)
                     .textTheme
@@ -445,20 +445,18 @@ class EditProfileScreen extends StatelessWidget {
                 },
                 child: Container(
                   margin: EdgeInsets.all(8),
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: EdgeInsets.symmetric(vertical: 8),
                   decoration: BoxDecoration(
                     color: AppColors.blackColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Center(
-                    child: Text(
-                      'Change',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontFamily: AppFonts.opensansRegular,
-                        color: AppColors.blackColor,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  child: Text(
+                    'Change',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontFamily: AppFonts.opensansRegular,
+                      color: AppColors.whiteColor,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),

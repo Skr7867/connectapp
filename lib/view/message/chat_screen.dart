@@ -8519,7 +8519,7 @@ class _ChatScreenState extends State<ChatScreen>
             ),
 
           // 5. Formatting toolbar
-          _buildFormattingToolbar(),
+          // _buildFormattingToolbar(),
           const SizedBox(height: 4),
           // 6. Input row
           _buildInputRow(),
@@ -8777,75 +8777,75 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   // Show message options (reply, copy, etc.)
-  Widget _buildFormattingToolbar() {
-    return SizedBox(
-      height: 30,
-      child: Row(
-        children: [
-          Text(
-            'Format: ',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(width: 8),
+  // Widget _buildFormattingToolbar() {
+  //   return SizedBox(
+  //     height: 30,
+  //     child: Row(
+  //       children: [
+  //         Text(
+  //           'Format: ',
+  //           style: TextStyle(
+  //             fontSize: 12,
+  //             color: Colors.grey[600],
+  //             fontWeight: FontWeight.w500,
+  //           ),
+  //         ),
+  //         const SizedBox(width: 8),
 
-          // Bold button
-          _buildFormatButton(
-            icon: Icons.format_bold,
-            isActive: _isBold,
-            onPressed: () => setState(() => _isBold = !_isBold),
-            tooltip: 'Bold',
-          ),
+  //         // Bold button
+  //         _buildFormatButton(
+  //           icon: Icons.format_bold,
+  //           isActive: _isBold,
+  //           onPressed: () => setState(() => _isBold = !_isBold),
+  //           tooltip: 'Bold',
+  //         ),
 
-          // Italic button
-          _buildFormatButton(
-            icon: Icons.format_italic,
-            isActive: _isItalic,
-            onPressed: () => setState(() => _isItalic = !_isItalic),
-            tooltip: 'Italic',
-          ),
+  //         // Italic button
+  //         _buildFormatButton(
+  //           icon: Icons.format_italic,
+  //           isActive: _isItalic,
+  //           onPressed: () => setState(() => _isItalic = !_isItalic),
+  //           tooltip: 'Italic',
+  //         ),
 
-          // Underline button
-          _buildFormatButton(
-            icon: Icons.format_underline,
-            isActive: _isUnderline,
-            onPressed: () => setState(() => _isUnderline = !_isUnderline),
-            tooltip: 'Underline',
-          ),
+  //         // Underline button
+  //         _buildFormatButton(
+  //           icon: Icons.format_underline,
+  //           isActive: _isUnderline,
+  //           onPressed: () => setState(() => _isUnderline = !_isUnderline),
+  //           tooltip: 'Underline',
+  //         ),
 
-          const SizedBox(width: 16),
+  //         const SizedBox(width: 16),
 
-          // Clear formatting button
-          InkWell(
-            onTap: () {
-              setState(() {
-                _isBold = false;
-                _isItalic = false;
-                _isUnderline = false;
-              });
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                'Clear',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.grey[700],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  //         // Clear formatting button
+  //         InkWell(
+  //           onTap: () {
+  //             setState(() {
+  //               _isBold = false;
+  //               _isItalic = false;
+  //               _isUnderline = false;
+  //             });
+  //           },
+  //           child: Container(
+  //             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+  //             decoration: BoxDecoration(
+  //               color: Colors.grey[200],
+  //               borderRadius: BorderRadius.circular(4),
+  //             ),
+  //             child: Text(
+  //               'Clear',
+  //               style: TextStyle(
+  //                 fontSize: 11,
+  //                 color: Colors.grey[700],
+  //               ),
+  //             ),
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   Widget _buildFormatButton({
     required IconData icon,
