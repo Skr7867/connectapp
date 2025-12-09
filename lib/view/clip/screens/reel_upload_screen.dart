@@ -29,23 +29,40 @@ class UploadProgressController extends GetxController {
   var isUploading = false.obs;
   var uploadProgress = 0.0.obs;
   var uploadingFileName = ''.obs;
+  var uploadStatus = ''.obs; // 'uploading', 'processing', 'completed', 'failed'
 
   void startUpload(String fileName) {
     isUploading.value = true;
     uploadProgress.value = 0.0;
     uploadingFileName.value = fileName;
+    uploadStatus.value = 'uploading';
   }
 
-  void updateProgress(double progress) {
+  void updateProgress(double progress, {String? status}) {
     uploadProgress.value = progress;
+    if (status != null) {
+      uploadStatus.value = status;
+    }
   }
 
   void completeUpload() {
     uploadProgress.value = 1.0;
-    Future.delayed(Duration(seconds: 2), () {
+    uploadStatus.value = 'completed';
+    Future.delayed(Duration(seconds: 3), () {
       isUploading.value = false;
       uploadProgress.value = 0.0;
       uploadingFileName.value = '';
+      uploadStatus.value = '';
+    });
+  }
+
+  void failUpload(String error) {
+    uploadStatus.value = 'failed';
+    Future.delayed(Duration(seconds: 5), () {
+      isUploading.value = false;
+      uploadProgress.value = 0.0;
+      uploadingFileName.value = '';
+      uploadStatus.value = '';
     });
   }
 
@@ -53,6 +70,7 @@ class UploadProgressController extends GetxController {
     isUploading.value = false;
     uploadProgress.value = 0.0;
     uploadingFileName.value = '';
+    uploadStatus.value = '';
   }
 }
 
@@ -168,6 +186,23 @@ class _ReelsPageState extends State<ReelsPage>
           // Upload Progress Indicator
           Obx(() {
             if (uploadProgressController.isUploading.value) {
+              final status = uploadProgressController.uploadStatus.value;
+              final progress = uploadProgressController.uploadProgress.value;
+
+              Color statusColor = Colors.blue;
+              IconData statusIcon = Icons.cloud_upload_outlined;
+
+              if (status == 'processing') {
+                statusColor = Colors.orange;
+                statusIcon = Icons.sync;
+              } else if (status == 'completed') {
+                statusColor = Colors.green;
+                statusIcon = Icons.check_circle_outline;
+              } else if (status == 'failed') {
+                statusColor = Colors.red;
+                statusIcon = Icons.error_outline;
+              }
+
               return Positioned(
                 bottom: 0,
                 left: 0,
@@ -180,6 +215,13 @@ class _ReelsPageState extends State<ReelsPage>
                       topLeft: Radius.circular(16),
                       topRight: Radius.circular(16),
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 10,
+                        offset: Offset(0, -2),
+                      ),
+                    ],
                   ),
                   child: SafeArea(
                     top: false,
@@ -193,14 +235,22 @@ class _ReelsPageState extends State<ReelsPage>
                               width: 40,
                               height: 40,
                               decoration: BoxDecoration(
-                                color: Colors.blue.withOpacity(0.2),
+                                color: statusColor.withOpacity(0.2),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: Icon(
-                                Icons.cloud_upload_outlined,
-                                color: Colors.blue,
-                                size: 20,
-                              ),
+                              child: status == 'processing'
+                                  ? Padding(
+                                      padding: EdgeInsets.all(8),
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: statusColor,
+                                      ),
+                                    )
+                                  : Icon(
+                                      statusIcon,
+                                      color: statusColor,
+                                      size: 20,
+                                    ),
                             ),
                             SizedBox(width: 12),
                             Expanded(
@@ -208,7 +258,13 @@ class _ReelsPageState extends State<ReelsPage>
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Uploading Clip',
+                                    status == 'completed'
+                                        ? 'Upload Complete!'
+                                        : status == 'failed'
+                                            ? 'Upload Failed'
+                                            : status == 'processing'
+                                                ? 'Processing Clip'
+                                                : 'Uploading Clip',
                                     style: TextStyle(
                                       color: Colors.white,
                                       fontSize: 14,
@@ -229,25 +285,37 @@ class _ReelsPageState extends State<ReelsPage>
                                 ],
                               ),
                             ),
-                            Text(
-                              '${(uploadProgressController.uploadProgress.value * 100).toInt()}%',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
+                            if (status != 'completed' && status != 'failed')
+                              Text(
+                                '${(progress * 100).toInt()}%',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            ),
+                            if (status == 'completed')
+                              Icon(Icons.check_circle,
+                                  color: Colors.green, size: 24),
+                            if (status == 'failed')
+                              IconButton(
+                                icon: Icon(Icons.close,
+                                    color: Colors.white, size: 20),
+                                onPressed: () =>
+                                    uploadProgressController.cancelUpload(),
+                                padding: EdgeInsets.zero,
+                                constraints: BoxConstraints(),
+                              ),
                           ],
                         ),
                         SizedBox(height: 12),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(4),
                           child: LinearProgressIndicator(
-                            value:
-                                uploadProgressController.uploadProgress.value,
+                            value: progress,
                             backgroundColor: Colors.grey[800],
                             valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.blue),
+                                AlwaysStoppedAnimation<Color>(statusColor),
                             minHeight: 6,
                           ),
                         ),
@@ -3061,13 +3129,29 @@ class _AddCaptionPageState extends State<AddCaptionPage> {
       return;
     }
 
-    setState(() {
-      isUploading = true;
-    });
-
-    // Start upload progress tracking
+    // Start upload in background
     uploadProgressController.startUpload(path.basename(widget.videoFile.path));
 
+    // Navigate back immediately - upload continues in background
+    Navigator.popUntil(context, (route) => route.isFirst);
+
+    // Show a toast that upload has started
+    Get.snackbar(
+      'Upload Started',
+      'Your clip is being uploaded in the background',
+      snackPosition: SnackPosition.TOP,
+      backgroundColor: Colors.black87,
+      colorText: Colors.white,
+      icon: Icon(Icons.cloud_upload, color: Colors.blue),
+      duration: Duration(seconds: 2),
+    );
+
+    // Perform upload in background
+    _performBackgroundUpload(token);
+  }
+
+// 3. New method for background upload
+  Future<void> _performBackgroundUpload(String token) async {
     try {
       String tagsString = tags.isNotEmpty
           ? tags.map((tag) => tag.startsWith('#') ? tag : '#$tag').join(' ')
@@ -3084,8 +3168,8 @@ class _AddCaptionPageState extends State<AddCaptionPage> {
       log('Request body: ${json.encode(requestBody)}');
       log('Using Clip ID: $clipId');
 
-      // Update progress to 20%
-      uploadProgressController.updateProgress(0.2);
+      // Update progress to 10%
+      uploadProgressController.updateProgress(0.1, status: 'Preparing...');
 
       // Step 1: Save metadata
       final metadataResponse = await http.post(
@@ -3102,8 +3186,8 @@ class _AddCaptionPageState extends State<AddCaptionPage> {
 
       if (metadataResponse.statusCode == 200 ||
           metadataResponse.statusCode == 201) {
-        // Update progress to 40%
-        uploadProgressController.updateProgress(0.4);
+        uploadProgressController.updateProgress(0.2,
+            status: 'Uploading video...');
 
         // Step 2: Upload video file
         String uploadUrl = _reelsManager.savedUploadUrl.value;
@@ -3111,63 +3195,49 @@ class _AddCaptionPageState extends State<AddCaptionPage> {
           log('Starting video upload to: $uploadUrl');
 
           final videoBytes = await widget.videoFile.readAsBytes();
-          log('Video file size: ${videoBytes.length} bytes');
+          final totalBytes = videoBytes.length;
+          log('Video file size: $totalBytes bytes');
 
-          final client = http.Client();
+          // Simulate smooth upload progress
+          _simulateUploadProgress();
 
-          try {
-            final request = http.Request('PUT', Uri.parse(uploadUrl));
+          final uploadResponse = await http.put(
+            Uri.parse(uploadUrl),
+            headers: {
+              'Content-Type': 'video/mp4',
+              'Content-Length': totalBytes.toString(),
+            },
+            body: videoBytes,
+          );
 
-            request.headers['Content-Type'] = 'video/mp4';
-            request.headers['Content-Length'] = videoBytes.length.toString();
+          log('Video upload response status: ${uploadResponse.statusCode}');
 
-            request.bodyBytes = videoBytes;
+          if (uploadResponse.statusCode == 200) {
+            uploadProgressController.updateProgress(0.95,
+                status: 'Finalizing...');
 
-            log('Uploading video...');
+            // Wait a moment for backend processing
+            await Future.delayed(Duration(seconds: 1));
 
-            // Simulate progress updates
-            uploadProgressController.updateProgress(0.5);
-            await Future.delayed(Duration(milliseconds: 500));
-            uploadProgressController.updateProgress(0.7);
+            uploadProgressController.completeUpload();
 
-            final streamedResponse = await client.send(request);
-            final uploadResponse =
-                await http.Response.fromStream(streamedResponse);
+            // Show success notification
+            Get.snackbar(
+              'Upload Complete!',
+              'Your clip has been uploaded successfully',
+              snackPosition: SnackPosition.TOP,
+              backgroundColor: Colors.green,
+              colorText: Colors.white,
+              icon: Icon(Icons.check_circle, color: Colors.white),
+              duration: Duration(seconds: 3),
+            );
 
-            log('Video upload response status: ${uploadResponse.statusCode}');
-
-            if (uploadResponse.statusCode == 200) {
-              uploadProgressController.updateProgress(0.9);
-
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Row(
-                    children: [
-                      Icon(Icons.check_circle, color: Colors.white),
-                      SizedBox(width: 12),
-                      Text('Video uploaded successfully!'),
-                    ],
-                  ),
-                  backgroundColor: Colors.green,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-
-              // Complete upload progress
-              uploadProgressController.completeUpload();
-
-              // Refresh clips
-              _reelsManager.refreshClips();
-
-              // Navigate back to reels page
-              Navigator.popUntil(context, (route) => route.isFirst);
-            } else {
-              log('Upload response body: ${uploadResponse.body}');
-              throw Exception(
-                  'Failed to upload video: ${uploadResponse.statusCode}');
-            }
-          } finally {
-            client.close();
+            // Refresh clips to show the new one
+            _reelsManager.refreshClips();
+          } else {
+            log('Upload response body: ${uploadResponse.body}');
+            throw Exception(
+                'Failed to upload video: ${uploadResponse.statusCode}');
           }
         } else {
           throw Exception('Upload URL is not available');
@@ -3185,20 +3255,27 @@ class _AddCaptionPageState extends State<AddCaptionPage> {
       }
     } catch (e) {
       log('Upload error: $e');
-      uploadProgressController.cancelUpload();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Upload failed: $e'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
+      uploadProgressController.failUpload(e.toString());
+
+      // Show error notification
+      Get.snackbar(
+        'Upload Failed',
+        'Failed to upload clip: ${e.toString()}',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        icon: Icon(Icons.error, color: Colors.white),
+        duration: Duration(seconds: 5),
       );
-    } finally {
-      if (mounted) {
-        setState(() {
-          isUploading = false;
-        });
-      }
+    }
+  }
+
+// Add this helper method to simulate smooth progress
+  void _simulateUploadProgress() async {
+    // Simulate progress from 20% to 85%
+    for (double progress = 0.2; progress <= 0.85; progress += 0.05) {
+      uploadProgressController.updateProgress(progress, status: 'Uploading...');
+      await Future.delayed(Duration(milliseconds: 200));
     }
   }
 
