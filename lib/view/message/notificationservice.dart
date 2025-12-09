@@ -83,11 +83,11 @@ class NotificationService {
         final userPrefs = Get.find<UserPreferencesViewmodel>();
         final userData = await userPrefs.getUser();
         if (userData?.token == null) {
-          log('⚠️ Notification open: No auth token, redirecting to login');
+          log(' Notification open: No auth token, redirecting to login');
           Get.offAllNamed(RouteName.loginScreen);
           return;
         }
-        log('✅ Notification open: Auth ready, navigating...');
+        log(' Notification open: Auth ready, navigating...');
         _handleNotificationTapFromPayload(payloadData);
       });
     } catch (e) {
@@ -176,7 +176,7 @@ class NotificationService {
     clearChatNotifications(chatId);
   }
 
-  // ✅ MAIN FIX: Format message based on type
+  // MAIN FIX: Format message based on type
   String _formatMessageBody(String body, String messageType) {
     if (messageType == 'sticker' && Uri.tryParse(body)?.isAbsolute == true) {
       return "📸 sent a sticker";
@@ -206,11 +206,11 @@ class NotificationService {
       final notification = message.notification;
       final data = message.data;
 
-      // ✅ Get title and determine body
+      // Get title and determine body
       final title = notification?.title ?? data['title'] ?? 'Notification';
       final messageType = data['messageType'] ?? 'text';
 
-      // ✅ Use 'message' field if available (formatted by backend), else format 'body'
+      // Use 'message' field if available (formatted by backend), else format 'body'
       String body;
       if (data.containsKey('message') &&
           data['message'].toString().isNotEmpty) {
@@ -257,30 +257,27 @@ class NotificationService {
     String? avatar,
     String? payload,
   }) async {
-    // -------------------------------
-    // 🔥 1. BLOCK completely if inside same chat
-    // -------------------------------
+    //. BLOCK completely if inside same chat
+
     if (ChatOpenTracker.currentChatId != null &&
         ChatOpenTracker.currentChatId == chatId) {
       log("🔕 Blocked notification — inside chat $chatId");
       return;
     }
 
-    // -------------------------------
     //  Detect if app is in foreground using Flutter lifecycle
-    // -------------------------------
+
     final bool isInForeground =
         WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
 
     if (isInForeground) {
-      log("📳 App foreground — Showing silent notification only");
+      log("App foreground — Showing silent notification only");
     } else {
-      log("🔔 App background — full sound + vibration");
+      log(" App background — full sound + vibration");
     }
 
-    // -------------------------------
-    // 3. Prepare title + message
-    // -------------------------------
+    // Prepare title + message
+
     final notificationId = chatId.hashCode;
     final title = isGroup ? '$senderName in $groupName' : senderName;
 
@@ -300,8 +297,8 @@ class NotificationService {
       priority: Priority.high,
       showWhen: true,
 
-      playSound: !isInForeground, // 🔥 no sound in foreground
-      enableVibration: !isInForeground, // 🔥 no vibration in foreground
+      playSound: !isInForeground, // no sound in foreground
+      enableVibration: !isInForeground, // no vibration in foreground
 
       largeIcon: avatar != null ? FilePathAndroidBitmap(avatar) : null,
 
@@ -313,9 +310,8 @@ class NotificationService {
       ),
     );
 
-    // -------------------------------
-    // 5. iOS Notification (silent in foreground)
-    // -------------------------------
+    //  iOS Notification (silent in foreground)
+
     final iosDetails = DarwinNotificationDetails(
       presentAlert: !isInForeground,
       presentSound: !isInForeground,
@@ -327,9 +323,8 @@ class NotificationService {
       iOS: iosDetails,
     );
 
-    // -------------------------------
-    // 6. Final payload
-    // -------------------------------
+    // Final payload
+
     final finalPayload = payload ??
         jsonEncode({
           'chatId': chatId,
@@ -346,7 +341,7 @@ class NotificationService {
         payload: finalPayload,
       );
     } catch (e) {
-      log('❌ Error showing notification: $e');
+      log(' Error showing notification: $e');
     }
 
     await _updateBadgeCount();
@@ -385,7 +380,7 @@ class NotificationService {
         payload: payload,
       );
     } catch (e) {
-      log('❌ Error showing general notification: $e');
+      log(' Error showing general notification: $e');
     }
 
     await _updateBadgeCount();
