@@ -19,7 +19,7 @@ class UserProfileModel {
   String? role;
   int? xp;
   int? level;
-  List<Badge>? badges;
+  List<Badges>? badges; // UPDATED HERE ✔
   bool? isPendingCreatorRequest;
   SubscriptionFeatures? subscriptionFeatures;
   int? currentStreak;
@@ -38,75 +38,81 @@ class UserProfileModel {
   bool? isAlreadyCreator;
   String? bio;
 
-  UserProfileModel(
-      {this.settings,
-      this.wallet,
-      this.subscription,
-      this.isAlreadyCreator,
-      this.referrals,
-      this.sId,
-      this.fullName,
-      this.username,
-      this.email,
-      this.followerCount,
-      this.followingCount,
-      this.totalPost,
-      this.totalLikes,
-      this.avatar,
-      this.purchasedAvatars,
-      this.interests,
-      this.enrolledCourses,
-      this.role,
-      this.xp,
-      this.level,
-      this.badges,
-      this.isPendingCreatorRequest,
-      this.subscriptionFeatures,
-      this.currentStreak,
-      this.maxStreak,
-      this.loginHistory,
-      this.isDeleted,
-      this.isSuspended,
-      this.createdAt,
-      this.updatedAt,
-      this.iV,
-      this.lastLogin,
-      this.xpToNextLevel,
-      this.nextLevelAt,
-      this.completedCourses,
-      this.bio,
-      this.activeDaysInWeek});
+  UserProfileModel({
+    this.socialLinks,
+    this.settings,
+    this.wallet,
+    this.subscription,
+    this.referrals,
+    this.sId,
+    this.fullName,
+    this.username,
+    this.email,
+    this.followerCount,
+    this.followingCount,
+    this.totalPost,
+    this.totalLikes,
+    this.avatar,
+    this.purchasedAvatars,
+    this.interests,
+    this.enrolledCourses,
+    this.role,
+    this.xp,
+    this.level,
+    this.badges,
+    this.isPendingCreatorRequest,
+    this.subscriptionFeatures,
+    this.currentStreak,
+    this.maxStreak,
+    this.loginHistory,
+    this.isDeleted,
+    this.isAlreadyCreator,
+    this.isSuspended,
+    this.createdAt,
+    this.updatedAt,
+    this.iV,
+    this.lastLogin,
+    this.xpToNextLevel,
+    this.nextLevelAt,
+    this.completedCourses,
+    this.bio,
+    this.activeDaysInWeek,
+  });
 
   UserProfileModel.fromJson(Map<String, dynamic> json) {
     socialLinks = json['socialLinks'] != null
         ? SocialLinks.fromJson(json['socialLinks'])
         : null;
+
     settings =
         json['settings'] != null ? Settings.fromJson(json['settings']) : null;
+
     wallet = json['wallet'] != null ? Wallet.fromJson(json['wallet']) : null;
+
     subscription = json['subscription'] != null
         ? Subscription.fromJson(json['subscription'])
         : null;
+
     referrals = json['referrals'] != null
         ? Referrals.fromJson(json['referrals'])
         : null;
+
     sId = json['_id'];
     fullName = json['fullName'];
     username = json['username'];
+    email = json['email'];
     followerCount = json['followerCount'];
     followingCount = json['followingCount'];
     totalPost = json['totalPost'];
     totalLikes = json['totalLikes'];
     bio = json['bio'];
-    email = json['email'];
+
     avatar = json['avatar'] != null ? Avatar.fromJson(json['avatar']) : null;
-    // purchasedAvatars = json['purchasedAvatars']?.cast<String>() ?? [];
+
     purchasedAvatars = (json['purchasedAvatars'] as List?)
             ?.map((e) => e.toString())
             .toList() ??
         [];
-    // interests = json['interests']?.cast<String>() ?? [];
-    // enrolledCourses = json['enrolledCourses']?.cast<String>() ?? [];
 
     interests =
         (json['interests'] as List?)?.map((e) => e.toString()).toList() ?? [];
@@ -114,54 +120,66 @@ class UserProfileModel {
     enrolledCourses =
         (json['enrolledCourses'] as List?)?.map((e) => e.toString()).toList() ??
             [];
+
     role = json['role'];
     xp = json['xp'];
     level = json['level'];
+
+    // UPDATED ✔ — using Badges model
     if (json['badges'] != null) {
-      badges = <Badge>[];
+      badges = <Badges>[];
       json['badges'].forEach((v) {
-        badges!.add(Badge.fromJson(v));
+        badges!.add(Badges.fromJson(v));
       });
     } else {
       badges = [];
     }
+
     isPendingCreatorRequest = json['isPendingCreatorRequest'];
+
     subscriptionFeatures = json['subscriptionFeatures'] != null
         ? SubscriptionFeatures.fromJson(json['subscriptionFeatures'])
         : null;
+
     currentStreak = json['currentStreak'];
     maxStreak = json['maxStreak'];
-    loginHistory = json['loginHistory']?.cast<String>() ?? [];
+
+    loginHistory =
+        (json['loginHistory'] as List?)?.map((e) => e.toString()).toList() ??
+            [];
+
     isDeleted = json['isDeleted'];
-    isAlreadyCreator = json['isAlreadyCreator'];
     isSuspended = json['isSuspended'];
+    isAlreadyCreator = json['isAlreadyCreator'];
+
     createdAt = json['createdAt'];
     updatedAt = json['updatedAt'];
     iV = json['__v'];
+
     lastLogin = json['lastLogin'];
     xpToNextLevel = json['xpToNextLevel'];
     nextLevelAt = json['nextLevelAt'];
     completedCourses = json['completedCourses'];
-    activeDaysInWeek = json['activeDaysInWeek']?.cast<String>() ?? [];
+
+    activeDaysInWeek = (json['activeDaysInWeek'] as List?)
+            ?.map((e) => e.toString())
+            .toList() ??
+        [];
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = <String, dynamic>{};
-    if (socialLinks != null) {
-      data['socialLinks'] = socialLinks!.toJson();
-    }
-    if (settings != null) {
-      data['settings'] = settings!.toJson();
-    }
-    if (wallet != null) {
-      data['wallet'] = wallet!.toJson();
-    }
-    if (subscription != null) {
-      data['subscription'] = subscription!.toJson();
-    }
-    if (referrals != null) {
-      data['referrals'] = referrals!.toJson();
-    }
+    final Map<String, dynamic> data = {};
+
+    if (socialLinks != null) data['socialLinks'] = socialLinks!.toJson();
+
+    if (settings != null) data['settings'] = settings!.toJson();
+
+    if (wallet != null) data['wallet'] = wallet!.toJson();
+
+    if (subscription != null) data['subscription'] = subscription!.toJson();
+
+    if (referrals != null) data['referrals'] = referrals!.toJson();
+
     data['_id'] = sId;
     data['fullName'] = fullName;
     data['username'] = username;
@@ -171,22 +189,26 @@ class UserProfileModel {
     data['followingCount'] = followingCount;
     data['totalLikes'] = totalLikes;
     data['bio'] = bio;
-    if (avatar != null) {
-      data['avatar'] = avatar!.toJson();
-    }
+
+    if (avatar != null) data['avatar'] = avatar!.toJson();
+
     data['purchasedAvatars'] = purchasedAvatars;
     data['interests'] = interests;
     data['enrolledCourses'] = enrolledCourses;
     data['role'] = role;
     data['xp'] = xp;
     data['level'] = level;
+
+    // UPDATED ✔
     if (badges != null) {
-      data['badges'] = badges!.map((v) => v.toJson()).toList();
+      data['badges'] = badges!.map((e) => e.toJson()).toList();
     }
+
     data['isPendingCreatorRequest'] = isPendingCreatorRequest;
-    if (subscriptionFeatures != null) {
+
+    if (subscriptionFeatures != null)
       data['subscriptionFeatures'] = subscriptionFeatures!.toJson();
-    }
+
     data['currentStreak'] = currentStreak;
     data['maxStreak'] = maxStreak;
     data['loginHistory'] = loginHistory;
@@ -200,6 +222,52 @@ class UserProfileModel {
     data['nextLevelAt'] = nextLevelAt;
     data['completedCourses'] = completedCourses;
     data['activeDaysInWeek'] = activeDaysInWeek;
+
+    return data;
+  }
+}
+
+class Badges {
+  String? sId;
+  String? name;
+  String? description;
+  int? xpRequired;
+  String? iconUrl;
+  String? createdAt;
+  String? updatedAt;
+  int? iV;
+
+  Badges(
+      {this.sId,
+      this.name,
+      this.description,
+      this.xpRequired,
+      this.iconUrl,
+      this.createdAt,
+      this.updatedAt,
+      this.iV});
+
+  Badges.fromJson(Map<String, dynamic> json) {
+    sId = json['_id'];
+    name = json['name'];
+    description = json['description'];
+    xpRequired = json['xpRequired'];
+    iconUrl = json['iconUrl'];
+    createdAt = json['createdAt'];
+    updatedAt = json['updatedAt'];
+    iV = json['__v'];
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = new Map<String, dynamic>();
+    data['_id'] = this.sId;
+    data['name'] = this.name;
+    data['description'] = this.description;
+    data['xpRequired'] = this.xpRequired;
+    data['iconUrl'] = this.iconUrl;
+    data['createdAt'] = this.createdAt;
+    data['updatedAt'] = this.updatedAt;
+    data['__v'] = this.iV;
     return data;
   }
 }

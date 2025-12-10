@@ -5155,7 +5155,7 @@ class _ChatScreenState extends State<ChatScreen>
     final chatType = data['chatType'] as String?;
 
     if (chatId != null) {
-      if (!mounted) return; // ✅ Prevent setState after dispose
+      if (!mounted) return;
 
       setState(() {
         unreadCounts[chatId] = unreadCount;
@@ -9095,7 +9095,7 @@ class _ChatScreenState extends State<ChatScreen>
                               if (chat.isGroup != true)
                                 Text(
                                   status?.isOnline == true
-                                      ? "Active now"
+                                      ? "Online"
                                       : "Last seen ${formatLastSeen(status?.lastSeen)}",
                                   style: TextStyle(
                                     fontSize: 12,

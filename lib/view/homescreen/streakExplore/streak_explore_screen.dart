@@ -1,3 +1,4 @@
+import 'package:connectapp/res/assets/image_assets.dart';
 import 'package:connectapp/res/custom_widgets/custome_appbar.dart';
 import 'package:connectapp/res/custom_widgets/responsive_padding.dart';
 import 'package:connectapp/view_models/controller/profile/user_profile_controller.dart';
@@ -37,6 +38,7 @@ class StreakExploreScreen extends StatelessWidget {
         color: Theme.of(context).scaffoldBackgroundColor,
         child: SingleChildScrollView(
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(height: screenHeight * 0.04),
               Center(
@@ -182,7 +184,61 @@ class StreakExploreScreen extends StatelessWidget {
                 ),
               ),
               SizedBox(height: screenHeight * 0.03),
-              // TopLearnerWidget(),
+              Padding(
+                padding: const EdgeInsets.only(left: 10),
+                child: Text(
+                  'Recently Earned Badges',
+                  style: TextStyle(
+                      fontSize: 25,
+                      fontFamily: AppFonts.opensansRegular,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).textTheme.bodyLarge?.color),
+                ),
+              ),
+              Obx(() {
+                final badges = userData.userList.value.badges ?? [];
+
+                if (badges.isEmpty) {
+                  return const Text("No badges earned yet");
+                }
+
+                return ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: badges.length,
+                  itemBuilder: (context, index) {
+                    final badge = badges[index];
+
+                    return ListTile(
+                      leading: CircleAvatar(
+                        radius: 25,
+                        backgroundColor: Colors.transparent,
+                        backgroundImage: badge.iconUrl != null &&
+                                badge.iconUrl!.isNotEmpty
+                            ? NetworkImage(badge.iconUrl!)
+                            : const AssetImage(ImageAssets.defaultProfileImg)
+                                as ImageProvider,
+                      ),
+                      title: Text(
+                        badge.name ?? "Unnamed Badge",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontFamily: AppFonts.opensansRegular,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).textTheme.bodyLarge?.color,
+                        ),
+                      ),
+                      subtitle: Text(
+                        badge.description ?? "",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Theme.of(context).textTheme.bodyLarge?.color,
+                        ),
+                      ),
+                    );
+                  },
+                );
+              })
             ],
           ),
         ),

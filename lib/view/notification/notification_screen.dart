@@ -346,7 +346,7 @@ class NotificationTile extends StatelessWidget {
           } else if (type == 'level_up') {
             Get.toNamed(RouteName.profileScreen);
           } else if (type == 'badge_earned') {
-            Get.toNamed(RouteName.profileScreen);
+            Get.toNamed(RouteName.streakExploreScreen);
           } else {
             Get.snackbar(
               'Info',
