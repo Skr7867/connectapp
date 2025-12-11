@@ -1,3 +1,4 @@
+// unread_count_controller.dart
 import 'dart:developer';
 import 'package:get/get.dart';
 import '../../../models/UnreadCount/unread_count_model.dart';
@@ -33,6 +34,7 @@ class UnreadCountController extends GetxController {
     if (token == null) return;
 
     unreadCountList.value = await _repository.fetchUnreadCount(token);
+    log("📊 Loaded ${unreadCountList.length} unread counts");
   }
 
   // ---- SOCKET UPDATE FROM SERVER ----
@@ -40,20 +42,40 @@ class UnreadCountController extends GetxController {
     final chatId = data["chatId"] ?? data["groupId"];
     if (chatId == null) return;
 
+    // ✅ Skip group messages
+    final isGroup = data["isGroup"] == true ||
+        data["groupId"] != null ||
+        data["group"] != null;
+    if (isGroup) {
+      log("📦 Skipping group message in UnreadCountController");
+      return;
+    }
+
+    // condition for increment
+    if (data["increment"] == true) {
+      incrementUnread(chatId);
+      return;
+    }
+
     final count = data["unreadCount"] ?? data["count"] ?? 0;
     _applyUnread(chatId, count);
-
-    log("📩 Server updated unread → $chatId = $count");
   }
 
   // ---- NEW MESSAGE EVENT ----
   void onNewMessageReceived(Map<String, dynamic> data) async {
-    final chatId = data["chat"] ?? data["group"] ?? data["chatId"];
+    final chatId = data["chat"] ?? data["chatId"];
     if (chatId == null) return;
+
+    // ✅ Skip group messages
+    final isGroup = data["group"] != null || data["groupId"] != null;
+    if (isGroup) {
+      log("📦 Skipping group message in UnreadCountController");
+      return;
+    }
 
     // If user is currently inside chat → no unread
     if (currentOpenChatId == chatId) {
-      log("📥 Message received but chat open → ignore unread");
+      log("📥 Message received but chat $chatId is open → ignore unread");
       return;
     }
 
@@ -66,6 +88,7 @@ class UnreadCountController extends GetxController {
       return;
     }
 
+    log("🔔 New message for chat $chatId - incrementing unread");
     incrementUnread(chatId);
   }
 
@@ -73,6 +96,10 @@ class UnreadCountController extends GetxController {
   void onMessagesRead(Map<String, dynamic> data) {
     final chatId = data["chatId"];
     if (chatId == null) return;
+
+    // ✅ Skip group messages
+    final isGroup = data["isGroup"] == true || data["groupId"] != null;
+    if (isGroup) return;
 
     clearUnreadForChat(chatId);
     log("🧹 Socket cleared unread for $chatId (messages read)");
@@ -85,8 +112,10 @@ class UnreadCountController extends GetxController {
     if (index != -1) {
       unreadCountList[index] =
           unreadCountList[index].copyWith(unreadCount: count);
+      log("📊 Applied unread count for $chatId: $count");
     } else {
       unreadCountList.add(UnreadCountModel(sId: chatId, unreadCount: count));
+      log("📊 Added new chat $chatId with unread: $count");
     }
 
     unreadCountList.refresh();
@@ -98,17 +127,16 @@ class UnreadCountController extends GetxController {
 
     if (index != -1) {
       final currentCount = unreadCountList[index].unreadCount ?? 0;
+      final newCount = currentCount + 1;
       unreadCountList[index] =
-          unreadCountList[index].copyWith(unreadCount: currentCount + 1);
+          unreadCountList[index].copyWith(unreadCount: newCount);
+      log("🔔 PRIVATE: Incremented $chatId: $currentCount -> $newCount");
     } else {
       unreadCountList.add(UnreadCountModel(sId: chatId, unreadCount: 1));
+      log("🔔 PRIVATE: New chat $chatId: 0 -> 1");
     }
 
     unreadCountList.refresh();
-
-    final latestCount =
-        unreadCountList.firstWhere((u) => u.sId == chatId).unreadCount;
-    log("🔔 New message → $chatId unread = $latestCount");
   }
 
   // ---- CLEAR UNREAD WHEN USER OPENS CHAT ----
@@ -119,8 +147,12 @@ class UnreadCountController extends GetxController {
     if (index != -1) {
       unreadCountList[index] = unreadCountList[index].copyWith(unreadCount: 0);
       unreadCountList.refresh();
+      log("✅ Cleared unread for $chatId");
     }
+  }
 
-    log("Cleared unread → $chatId");
+  void closedChat() {
+    currentOpenChatId = null;
+    log("👋 Closed current chat");
   }
 }

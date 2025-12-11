@@ -87,7 +87,7 @@ class _ChatScreenState extends State<ChatScreen>
   final UserPreferencesViewmodel _userPreferences = UserPreferencesViewmodel();
   String? selectedChatId;
   StreamSubscription<Map<String, dynamic>>? _unreadCountSubscription;
-  Map<String, int> unreadCounts = {};
+  // Map<String, int> unreadCounts = {};
   bool _isBold = false;
   final Map<String, GlobalKey> _messageKeys = {};
   bool _isItalic = false;
@@ -252,10 +252,6 @@ class _ChatScreenState extends State<ChatScreen>
     "🥴"
   ];
 
-  //imageuploadingstartsfromhere
-  // final ImagePicker _picker = ImagePicker();
-  // File? _selectedImage;
-  // String? _uploadedImageUrl;
   bool _isUploading = false;
   double _uploadProgress = 0.0;
   List<Message> pinnedMessages = [];
@@ -264,7 +260,22 @@ class _ChatScreenState extends State<ChatScreen>
   final TextEditingController _chatSearchController = TextEditingController();
   List<Message> _chatFilteredMessages = [];
 
-// Add this method after _getGroupMembersForMention
+  DateTime parseTimestamp(dynamic ts) {
+    if (ts == null) return DateTime.now();
+
+    if (ts is int) return DateTime.fromMillisecondsSinceEpoch(ts);
+
+    if (ts is String) {
+      try {
+        return DateTime.parse(ts);
+      } catch (_) {
+        return DateTime.now();
+      }
+    }
+
+    return DateTime.now();
+  }
+
   void _onMessageTextChanged(String text) {
     if (!isGroup) return;
 
@@ -512,27 +523,34 @@ class _ChatScreenState extends State<ChatScreen>
 
   void _onScroll() {
     if (!_scrollController.hasClients) return;
+
     final offset = _scrollController.offset;
-    // Load older messages when scrolling near the top
+    final maxScroll = _scrollController.position.maxScrollExtent;
+
+    // ✅ Load older messages when scrolling near the top
     if (offset <= _scrollThreshold &&
         !_isLoadingOlderMessages &&
         selectedChatId != null &&
         (_hasMoreMessages[selectedChatId] ?? true)) {
       _loadOlderMessages();
     }
-    // Existing scroll to bottom logic
-    if (offset > 100) {
-      if (!_showScrollToBottom) {
-        setState(() {
-          _showScrollToBottom = true;
-        });
-      }
-    } else {
-      if (_showScrollToBottom) {
-        setState(() {
-          _showScrollToBottom = false;
-        });
-      }
+
+    // ✅ Update scroll to bottom button visibility
+    // Show button if not at bottom (more than 100 pixels from bottom)
+    final shouldShowButton = maxScroll - offset > 100;
+
+    if (shouldShowButton != _showScrollToBottom) {
+      setState(() {
+        _showScrollToBottom = shouldShowButton;
+      });
+    }
+
+    // ✅ Update user at bottom state
+    final isAtBottom = maxScroll - offset < _bottomThreshold;
+    if (isAtBottom != _isUserAtBottom) {
+      setState(() {
+        _isUserAtBottom = isAtBottom;
+      });
     }
   }
 
@@ -702,12 +720,6 @@ class _ChatScreenState extends State<ChatScreen>
         if (!mounted) return;
 
         if (success) {
-          // Update chat list positions and refresh
-          for (String chatId in _selectedForwardChats) {
-            setState(() {
-              unreadCounts[chatId] = (unreadCounts[chatId] ?? 0) + 1;
-            });
-          }
           _fetchPrivateChats();
           _fetchGroups();
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -773,18 +785,6 @@ class _ChatScreenState extends State<ChatScreen>
           _showScrollToBottom = shouldShowButton;
         });
       }
-
-      // Clear unread count when user scrolls to bottom
-      if (isAtBottom && selectedChatId != null) {
-        final currentUnreadCount = unreadCounts[selectedChatId!] ?? 0;
-        if (currentUnreadCount > 0) {
-          // Send socket event to clear unread count
-          markChatAsRead(selectedChatId!, currentUserId!);
-          setState(() {
-            unreadCounts[selectedChatId!] = 0;
-          });
-        }
-      }
     });
   }
 
@@ -796,7 +796,7 @@ class _ChatScreenState extends State<ChatScreen>
 
     // Return emojis based on subscription level
     if (allowedEmojis >= emojiReactions.length) {
-      return emojiReactions; // All emojis available
+      return emojiReactions;
     } else {
       return emojiReactions.take(allowedEmojis).toList();
     }
@@ -894,9 +894,7 @@ class _ChatScreenState extends State<ChatScreen>
                       fontFamily: AppFonts.opensansRegular),
                 ),
                 onPressed: () {
-                  Navigator.of(context).pop();
-                  // Add navigation to premium upgrade page
-                  // Navigator.push(context, MaterialPageRoute(builder: (context) => PremiumUpgradePage()));
+                  Get.toNamed(RouteName.membershipPlan);
                 },
               ),
             TextButton(
@@ -4631,22 +4629,47 @@ class _ChatScreenState extends State<ChatScreen>
 
     _messageSubscription = _socketService.messageStream.listen((data) {
       _handleReceiveMessage(data);
-      // Update unread count for the chat if it's not currently selected
-      String? chatId;
 
-      // Determine chatId based on message type
-      if (data['group'] != null) {
-        chatId = data['group'];
-      } else if (data['chat'] != null) {
-        chatId = data['chat'];
-      }
+      String? chatId =
+          data["group"] ?? data["groupId"] ?? data["chat"] ?? data["chatId"];
+      if (chatId == null) return;
 
-      // Only increment unread if this chat is not currently selected
-      if (chatId != null && chatId != selectedChatId) {
+      final lastMessageText = data["message"]?["content"] ??
+          data["message"]?["text"] ??
+          data["lastMessage"] ??
+          "";
+
+      final lastTimestamp = parseTimestamp(data["message"]?["createdAt"] ??
+          data["message"]?["timestamp"] ??
+          data["message"]?["sentAt"] ??
+          data["message"]?["updatedAt"]);
+
+      final index = allChats.indexWhere((c) => c.id == chatId);
+      if (index != -1) {
+        final old = allChats[index];
+
+        final updatedChat = Chat(
+          id: old.id,
+          name: old.name,
+          avatar: old.avatar,
+          lastMessage: lastMessageText,
+          timestamp: lastTimestamp, // ⬅ NEW TIMESTAMP
+          isGroup: old.isGroup,
+          isOnline: old.isOnline,
+          senderName: old.senderName,
+          participants: old.participants,
+          pinnedMessages: old.pinnedMessages,
+        );
+
         setState(() {
-          unreadCounts[chatId!] = (unreadCounts[chatId] ?? 0) + 1;
+          allChats[index] = updatedChat;
+
+          // sort like WhatsApp
+          allChats.sort((a, b) => b.timestamp.compareTo(a.timestamp));
         });
       }
+
+      // unread logic (already perfect)
     });
 
     _groupDetailsSubscription =
@@ -5157,9 +5180,9 @@ class _ChatScreenState extends State<ChatScreen>
     if (chatId != null) {
       if (!mounted) return;
 
-      setState(() {
-        unreadCounts[chatId] = unreadCount;
-      });
+      // setState(() {
+      //   unreadCounts[chatId] = unreadCount;
+      // });
     }
   }
 
@@ -5307,9 +5330,9 @@ class _ChatScreenState extends State<ChatScreen>
       chatId: chatId,
       userId: currentUserId,
     );
-    setState(() {
-      unreadCounts[chatId] = 0;
-    });
+    // setState(() {
+    //   unreadCounts[chatId] = 0;
+    // });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _sortChatsSafely();
@@ -5889,8 +5912,8 @@ class _ChatScreenState extends State<ChatScreen>
           lastMessage: message.content,
           timestamp: message.timestamp,
           // Use timestamp, not lastMessageTime
-          unread:
-              allChats[chatIndex].unread + (selectedChatId == chatId ? 0 : 1),
+          // unread:
+          //     allChats[chatIndex].unread + (selectedChatId == chatId ? 0 : 1),
           isGroup: allChats[chatIndex].isGroup,
           isOnline: allChats[chatIndex].isOnline,
           senderName: message.sender.name,
@@ -5943,14 +5966,14 @@ class _ChatScreenState extends State<ChatScreen>
 
     final newMessage = Message.fromJson(serverMessage);
     final isCurrentChat = selectedChatId == chatId;
-    // Store the last read message before adding new message for non-current chats
+
     if (!isCurrentChat && lastReadMessageId[chatId] == null) {
       final existingMessages = messages[chatId] ?? [];
       if (existingMessages.isNotEmpty) {
-        final lastMessageId = _getMessageId(existingMessages.last);
         lastReadMessageId[chatId] = existingMessages.last.id;
       }
     }
+
     setState(() {
       if (messages[chatId] == null) {
         messages[chatId] = [];
@@ -5960,37 +5983,53 @@ class _ChatScreenState extends State<ChatScreen>
 
     _showNotificationIfNeeded(chatId, newMessage, isGroupMessage);
 
-    // Handle scrolling and unread count for current chat
     if (isCurrentChat) {
       _cleanupMessageKeys();
       if (_isUserAtBottom) {
-        // User is at bottom, scroll to show new message and mark as read
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _scrollToBottom();
         });
 
-        // Mark message as read immediately since user is at bottom
         markChatAsRead(chatId, currentUserId!);
         NotificationService().clearChatNotifications(chatId);
-        final newMessageId = _getMessageId(newMessage);
-        lastReadMessageId[chatId] = newMessageId;
+        lastReadMessageId[chatId] = newMessage.id;
       }
-      _updateChatLastMessage(chatId, newMessage);
     }
 
-    // Update the chat's last message in the chat list
+    // ✅ Update chat's last message and timestamp
     _updateChatLastMessage(chatId, newMessage);
 
-    // Trigger sorting after new message
+    // ✅ Force chat list to resort immediately
+    setState(() {
+      // Update the specific chat's timestamp in both directChats and groups
+      if (!isGroupMessage) {
+        final chatIndex = directChats.indexWhere((chat) => chat.id == chatId);
+        if (chatIndex != -1) {
+          directChats[chatIndex] = Chat(
+            id: directChats[chatIndex].id,
+            name: directChats[chatIndex].name,
+            avatar: directChats[chatIndex].avatar,
+            lastMessage: newMessage.content,
+            timestamp: newMessage.timestamp, // ✅ Update timestamp
+            isGroup: directChats[chatIndex].isGroup,
+            participants: directChats[chatIndex].participants,
+          );
+        }
+      } else {
+        final groupIndex = groups.indexWhere((group) => group.id == chatId);
+        if (groupIndex != -1) {
+          // Groups will be updated via GroupUnreadCountController
+        }
+      }
+    });
+
+    // ✅ Trigger resorting
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _sortChatsSafely();
     });
   }
 
   Widget _buildScrollToBottomButton() {
-    final currentUnreadCount =
-        selectedChatId != null ? (unreadCounts[selectedChatId!] ?? 0) : 0;
-
     return AnimatedOpacity(
       opacity: _showScrollToBottom ? 1.0 : 0.0,
       duration: const Duration(milliseconds: 300),
@@ -6011,49 +6050,15 @@ class _ChatScreenState extends State<ChatScreen>
           child: InkWell(
             borderRadius: BorderRadius.circular(25),
             onTap: () {
-              if (currentUnreadCount > 0) {
-                _scrollToFirstUnreadMessage();
-              } else {
-                _scrollToBottom(force: true);
-              }
+              // ✅ Fix scroll to bottom
+              _scrollToBottom(force: true);
             },
             child: Container(
               padding: const EdgeInsets.all(12),
-              child: Stack(
-                children: [
-                  const Icon(
-                    Icons.keyboard_arrow_down,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                  if (currentUnreadCount > 0)
-                    Positioned(
-                      top: -4,
-                      right: -4,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: Colors.red,
-                          shape: BoxShape.circle,
-                        ),
-                        constraints: const BoxConstraints(
-                          minWidth: 18,
-                          minHeight: 18,
-                        ),
-                        child: Text(
-                          currentUnreadCount > 99
-                              ? '99+'
-                              : '$currentUnreadCount',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
-                ],
+              child: const Icon(
+                Icons.keyboard_arrow_down,
+                color: Colors.white,
+                size: 24,
               ),
             ),
           ),
@@ -6137,8 +6142,8 @@ class _ChatScreenState extends State<ChatScreen>
           avatar: directChats[directChatIndex].avatar,
           lastMessage: message.content,
           timestamp: message.timestamp, // Update with latest message timestamp
-          unread:
-              unreadCounts[chatId] ?? directChats[directChatIndex].unread + 1,
+          // unread:
+          //     unreadCounts[chatId] ?? directChats[directChatIndex].unread + 1,
           isGroup: directChats[directChatIndex].isGroup,
           participants: directChats[directChatIndex].participants,
         );
@@ -6400,7 +6405,7 @@ class _ChatScreenState extends State<ChatScreen>
               ? chatMessages!.last.content
               : chat.lastMessage,
           timestamp: lastMessageTime,
-          unread: unread,
+          // unread: unread,
           isGroup: chat.isGroup,
           participants: chat.participants,
         );
@@ -6419,7 +6424,7 @@ class _ChatScreenState extends State<ChatScreen>
           avatar: groupUnread.groupAvatar ?? '/group-placeholder.jpg',
           lastMessage: groupUnread.lastMessage?.text ?? 'Group created',
           timestamp: lastMessageTime,
-          unread: unread,
+          // unread: unread,
           isGroup: true,
           participants: groupUnread.members
               ?.where(
@@ -6443,8 +6448,8 @@ class _ChatScreenState extends State<ChatScreen>
       if (timestampCompare != 0) return timestampCompare;
 
       // Secondary sort: unread count (higher unread first)
-      final unreadCompare = b.unread.compareTo(a.unread);
-      if (unreadCompare != 0) return unreadCompare;
+      // final unreadCompare = b.unread.compareTo(a.unread);
+      // if (unreadCompare != 0) return unreadCompare;
 
       // Tertiary sort: alphabetically by name
       return a.name.compareTo(b.name);
@@ -6478,6 +6483,9 @@ class _ChatScreenState extends State<ChatScreen>
     return group?.admins!.contains(currentUserId) ?? false;
   }
 
+  // In chat_screen.dart
+
+// ✅ UPDATE _selectChat method
   void _selectChat(String chatId) async {
     final unreadController = Get.find<UnreadCountController>();
     final groupUnreadController = Get.find<GroupUnreadCountController>();
@@ -6489,7 +6497,10 @@ class _ChatScreenState extends State<ChatScreen>
       log("⚠️ Chat not found...");
       return;
     }
+
     _clearReplyState();
+
+    // ✅ Clear unread counts
     if (chat.isGroup) {
       groupUnreadController.clearUnread(chatId);
     } else {
@@ -6509,7 +6520,8 @@ class _ChatScreenState extends State<ChatScreen>
 
     ChatOpenTracker.currentChatId = chatId;
     await _localFileManager.updateCurrentUserId(chatId);
-    final currentUnreadCount = unreadCounts[chatId] ?? 0;
+
+    // ✅ Check if messages already loaded
     final alreadyLoaded = messages.containsKey(chatId);
 
     setState(() {
@@ -6519,7 +6531,6 @@ class _ChatScreenState extends State<ChatScreen>
       _translatingMessages.clear();
       _translationError = null;
       showChatList = MediaQuery.of(context).size.width <= 600 ? false : true;
-      unreadCounts[chatId] = 0;
       _isLoadingMessages = !alreadyLoaded;
       _isLoadingOlderMessages = false;
       _hasShownUnreadSeparator = false;
@@ -6531,23 +6542,6 @@ class _ChatScreenState extends State<ChatScreen>
       _hasMoreMessages[chatId] = true;
       if (!chat.isGroup) {
         markChatAsRead(chatId, currentUserId!);
-      }
-
-      final chatMsgs = messages[chatId] ?? [];
-
-      if (currentUnreadCount > 0 && chatMsgs.isNotEmpty) {
-        if (chatMsgs.length > currentUnreadCount) {
-          final lastReadIndex = chatMsgs.length - currentUnreadCount - 1;
-          lastReadMessageId[chatId] = _getMessageId(chatMsgs[lastReadIndex]);
-        } else {
-          lastReadMessageId[chatId] = null;
-        }
-      } else {
-        if (chatMsgs.isNotEmpty) {
-          lastReadMessageId[chatId] = _getMessageId(chatMsgs.last);
-        } else {
-          lastReadMessageId[chatId] = null;
-        }
       }
 
       if (!alreadyLoaded) {
@@ -6574,18 +6568,51 @@ class _ChatScreenState extends State<ChatScreen>
       }
     }
 
-    // FIXED: Ensure scroll to bottom for all chats (groups and direct)
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _sortChatsSafely();
-      // Use multiple frame callbacks to ensure ListView is ready
+    // ✅ FIXED: Only scroll to bottom on initial load or when no messages exist
+    if (!alreadyLoaded || (messages[chatId]?.isEmpty ?? true)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        _sortChatsSafely();
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          _scrollToBottom(isInitialLoad: true);
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _scrollToBottom(isInitialLoad: true);
+          });
         });
       });
-    });
+    } else {
+      // ✅ Chat already loaded - maintain scroll position
+      log("📜 Chat already loaded - maintaining scroll position");
+      _sortChatsSafely();
+    }
   }
 
+// ✅ Add method to handle back button from chat
+  void _closeChat() {
+    final unreadController = Get.find<UnreadCountController>();
+    final groupUnreadController = Get.find<GroupUnreadCountController>();
+
+    // ✅ Notify controllers that chat is closed
+    unreadController.closedChat();
+    groupUnreadController.closedGroup();
+
+    ChatOpenTracker.currentChatId = null;
+
+    setState(() {
+      showChatList = true;
+      selectedChatId = null;
+    });
+    if (MediaQuery.of(context).size.width <= 600) {
+      IconButton(
+        icon: Icon(
+          Icons.arrow_back,
+          color: Theme.of(context).textTheme.bodyLarge?.color,
+        ),
+        onPressed: () {
+          _clearReplyState();
+          _closeChat(); // ✅ Use new method instead of setState directly
+        },
+      );
+    }
+  }
 // Method to mark messages as read and update last read position
 
   void _joinPrivateChat(String chatId) {
@@ -7743,31 +7770,30 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   void _scrollToBottom({bool force = false, bool isInitialLoad = false}) {
-    if (_scrollController.hasClients) {
-      if (isInitialLoad) {
-        // For initial load, use multiple frame callbacks to ensure ListView is ready
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (_scrollController.hasClients) {
-              _scrollController.jumpTo(
-                _scrollController.position.maxScrollExtent,
-              );
-            }
-          });
-        });
-      } else {
-        // For regular scrolling, jump immediately
-        _scrollController.jumpTo(
-          _scrollController.position.maxScrollExtent,
-        );
-      }
+    if (!_scrollController.hasClients) return;
 
-      // Clear unread messages when manually scrolling to bottom
-      if (force) {
-        setState(() {
-          unreadCounts[selectedChatId!] = 0;
+    if (isInitialLoad) {
+      // For initial load, use multiple frame callbacks
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_scrollController.hasClients) {
+            _scrollController.jumpTo(
+              _scrollController.position.maxScrollExtent,
+            );
+          }
         });
-      }
+      });
+    } else {
+      // ✅ For button tap or new messages - use animateTo
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController.hasClients) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
+      });
     }
   }
 
@@ -7785,18 +7811,18 @@ class _ChatScreenState extends State<ChatScreen>
     if (currentUserId == null) return;
 
     // For simplicity, scroll to a position based on unread count
-    final unreadCount = unreadCounts[selectedChatId!] ?? 0;
-    if (unreadCount > 0 && currentMessages.length >= unreadCount) {
-      final targetIndex = currentMessages.length - unreadCount;
-      final itemHeight = 80.0; // Approximate height per message
-      final targetPosition = targetIndex * itemHeight;
+    // final unreadCount = unreadCounts[selectedChatId!] ?? 0;
+    // if (unreadCount > 0 && currentMessages.length >= unreadCount) {
+    //   final targetIndex = currentMessages.length - unreadCount;
+    //   final itemHeight = 80.0; // Approximate height per message
+    //   final targetPosition = targetIndex * itemHeight;
 
-      _scrollController.animateTo(
-        targetPosition,
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeInOut,
-      );
-    }
+    //   _scrollController.animateTo(
+    //     targetPosition,
+    //     duration: const Duration(milliseconds: 500),
+    //     curve: Curves.easeInOut,
+    //   );
+    // }
   }
 
   String _formatTime(dynamic timestamp) {
@@ -8183,30 +8209,6 @@ class _ChatScreenState extends State<ChatScreen>
     );
   }
 
-  void _deleteChat(String chatId) {
-    // Delete chat
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Delete Chat'),
-        content: Text('Are you sure you want to delete this chat?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // _socket?.emit('deleteChat', {'chatId': chatId});
-            },
-            child: Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildChatListItem(Chat chat) {
     final unreadController = Get.find<UnreadCountController>();
     final groupUnreadController = Get.find<GroupUnreadCountController>();
@@ -8222,7 +8224,6 @@ class _ChatScreenState extends State<ChatScreen>
         );
         unreadCount = groupUnreadItem.unreadCount ?? 0;
       } else {
-        // For private chats, use UnreadCountController
         final unreadItem = unreadController.unreadCountList.firstWhere(
           (u) => u.sId == chat.id,
           orElse: () => UnreadCountModel(sId: chat.id, unreadCount: 0),
@@ -8280,10 +8281,10 @@ class _ChatScreenState extends State<ChatScreen>
                       margin: const EdgeInsets.only(top: 6),
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                          color: Colors.blue,
-                          // borderRadius: BorderRadius.circular(12),
-                          shape: BoxShape.circle),
+                      decoration: const BoxDecoration(
+                        color: Colors.blue,
+                        shape: BoxShape.circle,
+                      ),
                       child: Text(
                         "$unreadCount",
                         style:

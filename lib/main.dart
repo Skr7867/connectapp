@@ -168,7 +168,7 @@ class _MyAppState extends State<MyApp> {
     FirebaseMessaging.onMessage.listen((message) {
       final data = message.data;
       final incomingChatId = data['chatId'];
-
+      final isGroup = data['isGroup'] == true || data['isGroup'] == 'true';
       log("[FG] Foreground message received from chat: $incomingChatId");
       log('gf $data');
 
@@ -183,6 +183,14 @@ class _MyAppState extends State<MyApp> {
         return;
       }
       lastMessageId = message.messageId;
+      if (incomingChatId != null) {
+        if (isGroup) {
+          Get.find<GroupUnreadCountController>()
+              .incrementGroupUnread(incomingChatId);
+        } else {
+          Get.find<UnreadCountController>().incrementUnread(incomingChatId);
+        }
+      }
 
       NotificationService().showNotification(message);
     });

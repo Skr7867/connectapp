@@ -114,7 +114,7 @@ class ChatService {
             // Pass the full lastMessage object, not just the content
             lastMessage: lastMessageData ?? '',
             timestamp: DateTime.parse(chat['updatedAt']),
-            unread: 0,
+            // unread: 0,
             isGroup: false,
             participants: (chat['participants'] as List)
                 .map((p) => Participant.fromJson(p))

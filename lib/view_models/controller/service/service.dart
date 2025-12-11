@@ -6,7 +6,7 @@ class Chat {
   final String? avatar;
   final dynamic lastMessage;
   final DateTime timestamp;
-  final int unread;
+  // final int unread;
   final bool isGroup;
   final bool? isOnline;
   final String? senderName;
@@ -19,7 +19,7 @@ class Chat {
       this.avatar,
       required this.lastMessage,
       required this.timestamp,
-      required this.unread,
+      // required this.unread,
       required this.isGroup,
       this.isOnline,
       this.senderName,
@@ -33,7 +33,7 @@ class Chat {
         avatar: json['avatar'] ?? json['groupAvatar'],
         lastMessage: json['lastMessage'],
         timestamp: DateTime.parse(json['updatedAt'] ?? json['createdAt']),
-        unread: json['unread'] ?? 0,
+        // unread: json['unread'] ?? 0,
         isGroup: json['isGroup'] ?? false,
         participants: json['participants'] != null
             ? (json['participants'] as List)
@@ -50,7 +50,7 @@ class Chat {
       'avatar': avatar,
       'lastMessage': lastMessage,
       'updatedAt': timestamp.toIso8601String(),
-      'unread': unread,
+      // 'unread': unread,
       'isGroup': isGroup,
       'participants': participants?.map((p) => p.toJson()).toList(),
       'pinnedMessages': 'pinnedMessages'
@@ -73,7 +73,7 @@ class Chat {
       avatar: avatar ?? this.avatar,
       lastMessage: lastMessage ?? this.lastMessage,
       timestamp: timestamp ?? this.timestamp,
-      unread: unread ?? this.unread,
+      // unread: unread ?? this.unread,
       isGroup: isGroup ?? this.isGroup,
       participants: participants ?? this.participants,
     );

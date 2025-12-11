@@ -217,23 +217,11 @@ class SocketService {
       _socket?.on('receiveMessage', (data) async {
         try {
           final messageData = Map<String, dynamic>.from(data);
-
-          // Save timestamp for sorting
-          final chatId = messageData['group'] ?? messageData['chat'];
-          if (chatId != null) {
-            final timestamp = DateTime.now().millisecondsSinceEpoch;
-            await _saveLastMessageTime(chatId, timestamp);
-          }
-
-          // ADD THIS: Emit to BOTH streams
           _messageController.add(messageData);
           _newMessageController.add(messageData);
-
-          log('Message received and persisted: $chatId');
         } catch (e) {
           _messageController.add({'data': data});
           _newMessageController.add({'data': data});
-          log('Error processing message: $e');
         }
       });
 

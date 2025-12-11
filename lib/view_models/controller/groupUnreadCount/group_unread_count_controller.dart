@@ -1,7 +1,6 @@
+// group_unread_count_controller.dart
 import 'dart:developer';
-
 import 'package:get/get.dart';
-
 import '../../../models/GroupUnreadCount/group_unread_count_model.dart';
 import '../../../repository/GroupUnreadCount/group_unread_count_repository.dart';
 import '../service/socketservice.dart';
@@ -22,14 +21,18 @@ class GroupUnreadCountController extends GetxController {
 
     // Listen to socket unread count update
     _socketService.unreadCountStream.listen((data) {
-      if (data["isGroup"] == true || data["groupId"] != null) {
+      final isGroup = data["isGroup"] == true ||
+          data["groupId"] != null ||
+          data["group"] != null;
+      if (isGroup) {
         _updateGroupUnreadFromSocket(data);
       }
     });
 
     _socketService.newMessageStream.listen(_onNewGroupMessageReceived);
+    _socketService.messageStream.listen(_onNewGroupMessageReceived);
     _socketService.messagesReadStream.listen(_onGroupMessagesRead);
-    log(" GroupUnreadCountController Initialized");
+    log("📡 GroupUnreadCountController Initialized");
   }
 
   Future<void> _loadInitialUnreadCounts() async {
@@ -37,39 +40,32 @@ class GroupUnreadCountController extends GetxController {
     if (token == null) return;
 
     unreadGroupList.value = await _repository.fetchGroupUnreadCount(token);
-    log("Fetched group unread counts: ${unreadGroupList.length}");
-
-    // Sort groups by last message timestamp
+    log("📊 Fetched group unread counts: ${unreadGroupList.length}");
     _sortGroupsByLastMessage();
   }
 
   void _updateGroupUnreadFromSocket(Map<String, dynamic> data) {
-    final groupId = data["groupId"] ?? data["chatId"];
+    final groupId = data["groupId"] ?? data["chatId"] ?? data["group"];
     final count = data["unreadCount"] ?? data["count"] ?? 0;
     final lastMessageData = data["lastMessage"];
 
-    log("Socket unread update received: groupId=$groupId, count=$count, rawData=$data");
+    log("📦 Socket unread update received: groupId=$groupId, count=$count");
 
     if (groupId == null) {
-      log(" No groupId in socket data");
+      log("⚠️ No groupId in socket data");
       return;
     }
 
     final index = unreadGroupList.indexWhere((g) => g.id == groupId);
 
     if (index != -1) {
-      // Update existing group
       unreadGroupList[index].unreadCount = count;
-
-      // Update last message if provided
       if (lastMessageData != null) {
         unreadGroupList[index].lastMessage =
             LastMessage.fromJson(lastMessageData);
       }
-
-      log("Updated existing group: ${unreadGroupList[index]}");
+      log("✅ Updated existing group: ${unreadGroupList[index].name} -> $count");
     } else {
-      // Create new group entry
       final newGroup = GroupUnreadCountModel(
         id: groupId,
         unreadCount: count,
@@ -78,32 +74,47 @@ class GroupUnreadCountController extends GetxController {
             : null,
       );
       unreadGroupList.add(newGroup);
+      log("➕ Added new group: $groupId -> $count");
     }
 
-    // Sort groups after update
     _sortGroupsByLastMessage();
     unreadGroupList.refresh();
-    log("Total groups tracked: ${unreadGroupList.length}");
   }
 
   void _onNewGroupMessageReceived(Map<String, dynamic> data) async {
     final groupId = data["group"] ?? data["groupId"];
     if (groupId == null) return;
-    if (currentOpenGroupId == groupId) return;
+
+    // ✅ Only handle group messages
+    final isGroup = data["group"] != null || data["groupId"] != null;
+    if (!isGroup) {
+      log("👤 Skipping private message in GroupUnreadCountController");
+      return;
+    }
+
+    if (currentOpenGroupId == groupId) {
+      log("📦 Group message received but group $groupId is open → ignore unread");
+      return;
+    }
 
     await _userPref.init();
     final user = await _userPref.getUser();
     final senderId = data["sender"]?["_id"] ?? data["senderId"];
-    if (senderId == user?.user.id) return;
 
-    // Create last message from socket data
+    if (senderId == user?.user.id) {
+      log("📤 Own group message → ignore unread");
+      return;
+    }
+
     final lastMessage = LastMessage(
-      text: data["text"] ?? data["content"],
+      text: data["content"] ?? data["text"] ?? data["message"]?["content"],
       sentAt: data["sentAt"] ??
           data["createdAt"] ??
+          data["timestamp"] ??
           DateTime.now().toIso8601String(),
     );
 
+    log("🔔 New group message for $groupId - incrementing unread");
     _updateGroupLastMessage(groupId, lastMessage);
     incrementUnread(groupId);
   }
@@ -115,8 +126,8 @@ class GroupUnreadCountController extends GetxController {
       unreadGroupList[index].lastMessage = lastMessage;
       _sortGroupsByLastMessage();
       unreadGroupList.refresh();
+      log("💬 Updated last message for group $groupId");
     } else {
-      // If group not found in list, add it
       final newGroup = GroupUnreadCountModel(
         id: groupId,
         unreadCount: 1,
@@ -125,12 +136,17 @@ class GroupUnreadCountController extends GetxController {
       unreadGroupList.add(newGroup);
       _sortGroupsByLastMessage();
       unreadGroupList.refresh();
+      log("➕ Added new group $groupId with unread: 1");
     }
   }
 
   void _onGroupMessagesRead(Map<String, dynamic> data) {
     final groupId = data["groupId"] ?? data["chatId"];
     if (groupId == null) return;
+
+    // ✅ Only handle group messages
+    final isGroup = data["isGroup"] == true || data["groupId"] != null;
+    if (!isGroup) return;
 
     clearUnread(groupId);
   }
@@ -139,14 +155,17 @@ class GroupUnreadCountController extends GetxController {
     final index = unreadGroupList.indexWhere((g) => g.id == groupId);
 
     if (index != -1) {
-      unreadGroupList[index].unreadCount;
-      _sortGroupsByLastMessage();
-      unreadGroupList.refresh();
+      final currentCount = unreadGroupList[index].unreadCount ?? 0;
+      final newCount = currentCount + 1;
+      unreadGroupList[index].unreadCount = newCount;
+      log(" GROUP: Incremented $groupId: $currentCount -> $newCount");
     } else {
       unreadGroupList.add(GroupUnreadCountModel(id: groupId, unreadCount: 1));
-      _sortGroupsByLastMessage();
-      unreadGroupList.refresh();
+      log("GROUP: New group $groupId: 0 -> 1");
     }
+
+    _sortGroupsByLastMessage();
+    unreadGroupList.refresh();
   }
 
   void clearUnread(String groupId) {
@@ -158,16 +177,47 @@ class GroupUnreadCountController extends GetxController {
       unreadGroupList[index].unreadCount = 0;
       _sortGroupsByLastMessage();
       unreadGroupList.refresh();
+      log("✅ Cleared unread for group $groupId");
     }
-
-    log("Cleared unread → Group $groupId");
   }
 
-  // Add this method to sort groups by last message timestamp
+  void incrementGroupUnread(String groupId,
+      {Map<String, dynamic>? lastMessageData}) {
+    final index = unreadGroupList.indexWhere((g) => g.id == groupId);
+
+    if (index != -1) {
+      unreadGroupList[index].unreadCount =
+          (unreadGroupList[index].unreadCount ?? 0) + 1;
+
+      if (lastMessageData != null) {
+        unreadGroupList[index].lastMessage =
+            LastMessage.fromJson(lastMessageData);
+      }
+    } else {
+      unreadGroupList.add(
+        GroupUnreadCountModel(
+          id: groupId,
+          unreadCount: 1,
+          lastMessage: lastMessageData != null
+              ? LastMessage.fromJson(lastMessageData)
+              : null,
+        ),
+      );
+    }
+
+    _sortGroupsByLastMessage();
+    unreadGroupList.refresh();
+  }
+
   void _sortGroupsByLastMessage() {
     unreadGroupList.sort((a, b) {
-      // Use the effective timestamp for sorting (last message time or creation time)
       return b.effectiveTimestamp.compareTo(a.effectiveTimestamp);
     });
+  }
+
+  // ✅ Add method to close group
+  void closedGroup() {
+    currentOpenGroupId = null;
+    log("👋 Closed current group");
   }
 }
