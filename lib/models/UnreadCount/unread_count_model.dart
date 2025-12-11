@@ -6,7 +6,6 @@ class UnreadCountModel {
   final String? createdAt;
   final String? updatedAt;
   final LastMessage? lastMessage;
-  final String? sentAt;
 
   UnreadCountModel({
     this.sId,
@@ -16,7 +15,6 @@ class UnreadCountModel {
     this.createdAt,
     this.updatedAt,
     this.lastMessage,
-    this.sentAt,
   });
 
   // ✅ copyWith
@@ -28,7 +26,6 @@ class UnreadCountModel {
     String? createdAt,
     String? updatedAt,
     LastMessage? lastMessage,
-    String? sentAt,
   }) {
     return UnreadCountModel(
       sId: sId ?? this.sId,
@@ -38,7 +35,6 @@ class UnreadCountModel {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       lastMessage: lastMessage ?? this.lastMessage,
-      sentAt: sentAt ?? this.sentAt,
     );
   }
 
@@ -52,7 +48,6 @@ class UnreadCountModel {
               .toList()
           : null,
       unreadCount: json['unreadCount'],
-      sentAt: json['lastMessage']?['sentAt'],
       pinnedMessages: json['pinnedMessages'] ?? [],
       createdAt: json['createdAt'],
       updatedAt: json['updatedAt'],
