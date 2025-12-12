@@ -37,6 +37,32 @@ class UnreadCountController extends GetxController {
     log("📊 Loaded ${unreadCountList.length} unread counts");
   }
 
+  void incrementUnreadWithLastMessage(String chatId,
+      {Map<String, dynamic>? lastMessageData}) {
+    final index = unreadCountList.indexWhere((u) => u.sId == chatId);
+
+    if (index != -1) {
+      unreadCountList[index] = unreadCountList[index].copyWith(
+        unreadCount: (unreadCountList[index].unreadCount ?? 0) + 1,
+        lastMessage: lastMessageData != null
+            ? LastMessage.fromJson(lastMessageData)
+            : unreadCountList[index].lastMessage,
+      );
+    } else {
+      unreadCountList.add(
+        UnreadCountModel(
+          sId: chatId,
+          unreadCount: 1,
+          lastMessage: lastMessageData != null
+              ? LastMessage.fromJson(lastMessageData)
+              : null,
+        ),
+      );
+    }
+
+    unreadCountList.refresh();
+  }
+
   // ---- SOCKET UPDATE FROM SERVER ----
   void updateUnreadFromSocket(Map<String, dynamic> data) {
     final chatId = data["chatId"] ?? data["groupId"];

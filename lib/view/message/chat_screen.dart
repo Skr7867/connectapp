@@ -5965,8 +5965,11 @@ class _ChatScreenState extends State<ChatScreen>
     }
 
     final newMessage = Message.fromJson(serverMessage);
-    final isCurrentChat = selectedChatId == chatId;
 
+    // ✅ FIX: Check if this chat is currently open
+    final isCurrentChat = ChatOpenTracker.currentChatId == chatId;
+
+    // ✅ FIX: Only set lastReadMessageId if chat is NOT currently open
     if (!isCurrentChat && lastReadMessageId[chatId] == null) {
       final existingMessages = messages[chatId] ?? [];
       if (existingMessages.isNotEmpty) {
@@ -5981,7 +5984,10 @@ class _ChatScreenState extends State<ChatScreen>
       messages[chatId] = [...messages[chatId]!, newMessage];
     });
 
-    _showNotificationIfNeeded(chatId, newMessage, isGroupMessage);
+    // ✅ FIX: Only show notification if chat is NOT open
+    if (!isCurrentChat) {
+      _showNotificationIfNeeded(chatId, newMessage, isGroupMessage);
+    }
 
     if (isCurrentChat) {
       _cleanupMessageKeys();
@@ -5996,12 +6002,11 @@ class _ChatScreenState extends State<ChatScreen>
       }
     }
 
-    // ✅ Update chat's last message and timestamp
+    // Update chat's last message and timestamp
     _updateChatLastMessage(chatId, newMessage);
 
-    // ✅ Force chat list to resort immediately
+    // Force chat list to resort
     setState(() {
-      // Update the specific chat's timestamp in both directChats and groups
       if (!isGroupMessage) {
         final chatIndex = directChats.indexWhere((chat) => chat.id == chatId);
         if (chatIndex != -1) {
@@ -6010,20 +6015,14 @@ class _ChatScreenState extends State<ChatScreen>
             name: directChats[chatIndex].name,
             avatar: directChats[chatIndex].avatar,
             lastMessage: newMessage.content,
-            timestamp: newMessage.timestamp, // ✅ Update timestamp
+            timestamp: newMessage.timestamp,
             isGroup: directChats[chatIndex].isGroup,
             participants: directChats[chatIndex].participants,
           );
         }
-      } else {
-        final groupIndex = groups.indexWhere((group) => group.id == chatId);
-        if (groupIndex != -1) {
-          // Groups will be updated via GroupUnreadCountController
-        }
       }
     });
 
-    // ✅ Trigger resorting
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _sortChatsSafely();
     });
@@ -6389,14 +6388,28 @@ class _ChatScreenState extends State<ChatScreen>
     final List<Chat> combined = [
       ...directChats.map((chat) {
         final chatMessages = messages[chat.id];
-        final lastMessageTime = chatMessages?.isNotEmpty == true
-            ? chatMessages!.last.timestamp
-            : chat.timestamp;
+
         final unreadItem = unreadController.unreadCountList.firstWhere(
           (u) => u.sId == chat.id,
           orElse: () => UnreadCountModel(sId: chat.id, unreadCount: 0),
         );
+
+        // Extract sentAt string
+        final sentAtString = unreadItem.lastMessage?.sentAt;
+
+        // Convert to DateTime safely
+        late DateTime lastMessageTime;
+
+        if (sentAtString != null) {
+          lastMessageTime = DateTime.tryParse(sentAtString) ?? chat.timestamp;
+        } else if (chatMessages?.isNotEmpty == true) {
+          lastMessageTime = chatMessages!.last.timestamp;
+        } else {
+          lastMessageTime = chat.timestamp;
+        }
+
         final unread = unreadItem.unreadCount ?? 0;
+
         return Chat(
           id: chat.id,
           name: chat.name,
@@ -6405,7 +6418,6 @@ class _ChatScreenState extends State<ChatScreen>
               ? chatMessages!.last.content
               : chat.lastMessage,
           timestamp: lastMessageTime,
-          // unread: unread,
           isGroup: chat.isGroup,
           participants: chat.participants,
         );
@@ -6490,6 +6502,7 @@ class _ChatScreenState extends State<ChatScreen>
     final unreadController = Get.find<UnreadCountController>();
     final groupUnreadController = Get.find<GroupUnreadCountController>();
 
+    // ✅ Set this FIRST before any other operations
     ChatOpenTracker.currentChatId = chatId;
 
     final chat = allChats.firstWhereOrNull((c) => c.id == chatId);
@@ -6518,7 +6531,6 @@ class _ChatScreenState extends State<ChatScreen>
       userId: currentUserId!,
     );
 
-    ChatOpenTracker.currentChatId = chatId;
     await _localFileManager.updateCurrentUserId(chatId);
 
     // ✅ Check if messages already loaded
@@ -6553,12 +6565,6 @@ class _ChatScreenState extends State<ChatScreen>
     }
 
     if (currentUserId != null) {
-      _socketService.chatOpened(
-        chatId: chatId,
-        userId: currentUserId!,
-        isGroup: chat.isGroup,
-      );
-
       if (chat.isGroup) {
         _joinGroup(chatId, currentUserId!, chatId);
       } else {
@@ -6568,52 +6574,57 @@ class _ChatScreenState extends State<ChatScreen>
       }
     }
 
-    // ✅ FIXED: Only scroll to bottom on initial load or when no messages exist
-    if (!alreadyLoaded || (messages[chatId]?.isEmpty ?? true)) {
+    // ✅ IMPROVED: Always scroll to bottom when selecting a chat
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _sortChatsSafely();
+      // Add multiple frame callbacks to ensure scroll happens
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _sortChatsSafely();
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _scrollToBottom(isInitialLoad: true);
-          });
+          if (_scrollController.hasClients) {
+            _scrollController.jumpTo(
+              _scrollController.position.maxScrollExtent,
+            );
+          }
         });
       });
-    } else {
-      // ✅ Chat already loaded - maintain scroll position
-      log("📜 Chat already loaded - maintaining scroll position");
-      _sortChatsSafely();
-    }
+    });
   }
 
 // ✅ Add method to handle back button from chat
   void _closeChat() {
+    // Prevent multiple calls
+    if (selectedChatId == null) return;
+
     final unreadController = Get.find<UnreadCountController>();
     final groupUnreadController = Get.find<GroupUnreadCountController>();
 
-    // ✅ Notify controllers that chat is closed
-    unreadController.closedChat();
-    groupUnreadController.closedGroup();
+    // Store chatId before clearing
+    final String? closingChatId = selectedChatId;
+    final bool isGroup = selectedChat?.isGroup ?? false;
 
+    // ✅ Notify controllers that chat is closed
+    if (isGroup) {
+      groupUnreadController.closedGroup();
+    } else {
+      unreadController.closedChat();
+    }
+
+    // ✅ ADD THIS: Clear ChatOpenTracker
     ChatOpenTracker.currentChatId = null;
 
-    setState(() {
-      showChatList = true;
-      selectedChatId = null;
-    });
-    if (MediaQuery.of(context).size.width <= 600) {
-      IconButton(
-        icon: Icon(
-          Icons.arrow_back,
-          color: Theme.of(context).textTheme.bodyLarge?.color,
-        ),
-        onPressed: () {
-          _clearReplyState();
-          _closeChat(); // ✅ Use new method instead of setState directly
-        },
-      );
+    // ✅ ADD THIS: Clear notifications for this chat
+    NotificationService().clearChatNotifications(closingChatId!);
+
+    // Clear state
+    if (mounted) {
+      setState(() {
+        showChatList = true;
+        selectedChatId = null;
+        _isLoadingMessages = false;
+        _isLoadingOlderMessages = false;
+      });
     }
   }
-// Method to mark messages as read and update last read position
 
   void _joinPrivateChat(String chatId) {
     //Safe chat lookup
@@ -7770,10 +7781,16 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   void _scrollToBottom({bool force = false, bool isInitialLoad = false}) {
-    if (!_scrollController.hasClients) return;
+    if (!_scrollController.hasClients) {
+      // Schedule scroll for next frame if controller not ready
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToBottom(force: force, isInitialLoad: isInitialLoad);
+      });
+      return;
+    }
 
-    if (isInitialLoad) {
-      // For initial load, use multiple frame callbacks
+    if (isInitialLoad || force) {
+      // For initial load or forced scroll, use multiple frame callbacks
       WidgetsBinding.instance.addPostFrameCallback((_) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (_scrollController.hasClients) {
@@ -7784,7 +7801,7 @@ class _ChatScreenState extends State<ChatScreen>
         });
       });
     } else {
-      // ✅ For button tap or new messages - use animateTo
+      // For regular scrolling
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_scrollController.hasClients) {
           _scrollController.animateTo(
@@ -8144,69 +8161,73 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   Widget _buildChatList() {
-    List<Chat> filteredChats = allChats;
+    Get.find<UnreadCountController>();
+    Get.find<GroupUnreadCountController>();
 
-    // First filter by section (direct/groups)
-    switch (selectedSection) {
-      case 'direct':
-        filteredChats = allChats.where((chat) => !chat.isGroup).toList();
-        break;
-      case 'groups':
-        filteredChats = allChats.where((chat) => chat.isGroup).toList();
-        break;
-      default:
-        break;
-    }
+    return Obx(() {
+      List<Chat> filteredChats = allChats;
+      // SECTION FILTER
+      switch (selectedSection) {
+        case 'direct':
+          filteredChats = filteredChats.where((chat) => !chat.isGroup).toList();
+          break;
+        case 'groups':
+          filteredChats = filteredChats.where((chat) => chat.isGroup).toList();
+          break;
+      }
 
-    // Then filter by search query
-    if (_searchController.text.isNotEmpty) {
-      String searchQuery = _searchController.text.toLowerCase();
-      filteredChats = filteredChats.where((chat) {
-        return chat.name.toLowerCase().contains(searchQuery);
-      }).toList();
-    }
+      // SEARCH FILTER
+      if (_searchController.text.isNotEmpty) {
+        final query = _searchController.text.toLowerCase();
+        filteredChats = filteredChats
+            .where((chat) => chat.name.toLowerCase().contains(query))
+            .toList();
+      }
 
-    // Show message when no results found
-    if (filteredChats.isEmpty && _searchController.text.isNotEmpty) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.search_off, size: 64, color: Colors.grey),
-            SizedBox(height: 16),
-            Text(
-              'No chats found',
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.grey,
-                fontWeight: FontWeight.w500,
+      // NO RESULTS
+      if (filteredChats.isEmpty && _searchController.text.isNotEmpty) {
+        return const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.search_off, size: 64, color: Colors.grey),
+              SizedBox(height: 16),
+              Text(
+                'No chats found',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontFamily: AppFonts.opensansRegular,
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Try a different search term',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
+              SizedBox(height: 8),
+              Text(
+                'Try a different search term',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontFamily: AppFonts.opensansRegular,
+                  color: Colors.grey,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
+        );
+      }
+
+      return RefreshIndicator(
+        onRefresh: _refreshChatList,
+        color: Colors.blueAccent,
+        child: ListView.builder(
+          physics: const AlwaysScrollableScrollPhysics(),
+          itemCount: filteredChats.length,
+          itemBuilder: (context, index) {
+            final chat = filteredChats[index];
+            return _buildChatListItem(chat);
+          },
         ),
       );
-    }
-
-    return RefreshIndicator(
-      onRefresh: _refreshChatList,
-      color: Colors.blueAccent,
-      child: ListView.builder(
-        physics: const AlwaysScrollableScrollPhysics(),
-        itemCount: filteredChats.length,
-        itemBuilder: (context, index) {
-          final chat = filteredChats[index];
-          return _buildChatListItem(chat);
-        },
-      ),
-    );
+    });
   }
 
   Widget _buildChatListItem(Chat chat) {
@@ -8215,6 +8236,7 @@ class _ChatScreenState extends State<ChatScreen>
 
     return Obx(() {
       int unreadCount = 0;
+      DateTime? lastTime;
 
       if (chat.isGroup) {
         final groupUnreadItem =
@@ -8222,14 +8244,29 @@ class _ChatScreenState extends State<ChatScreen>
           (g) => g.id == chat.id,
           orElse: () => GroupUnreadCountModel(id: chat.id, unreadCount: 0),
         );
-        unreadCount = groupUnreadItem.unreadCount ?? 0;
+
+        unreadCount = groupUnreadItem.unreadCount;
+
+        lastTime = groupUnreadItem.effectiveTimestamp;
       } else {
+        // PRIVATE CHAT
         final unreadItem = unreadController.unreadCountList.firstWhere(
           (u) => u.sId == chat.id,
           orElse: () => UnreadCountModel(sId: chat.id, unreadCount: 0),
         );
+
         unreadCount = unreadItem.unreadCount ?? 0;
+
+        final sentAtString = unreadItem.lastMessage?.sentAt;
+
+        if (sentAtString != null) {
+          lastTime = DateTime.tryParse(sentAtString);
+        }
+
+        lastTime ??= chat.timestamp;
       }
+
+      final formattedTime = _formatTime(lastTime);
 
       return InkWell(
         borderRadius: BorderRadius.circular(10),
@@ -8267,8 +8304,9 @@ class _ChatScreenState extends State<ChatScreen>
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
+                  // ✅ FIXED TIME DISPLAY
                   Text(
-                    _formatTime(chat.timestamp),
+                    formattedTime,
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight:
@@ -8276,6 +8314,7 @@ class _ChatScreenState extends State<ChatScreen>
                       color: unreadCount > 0 ? Colors.blue : Colors.grey,
                     ),
                   ),
+
                   if (unreadCount > 0)
                     Container(
                       margin: const EdgeInsets.only(top: 6),
@@ -9038,10 +9077,11 @@ class _ChatScreenState extends State<ChatScreen>
                       ),
                       onPressed: () {
                         _clearReplyState();
-                        setState(() {
-                          showChatList = true;
-                          selectedChatId = null;
-                        });
+                        _closeChat();
+                        // setState(() {
+                        //   showChatList = true;
+                        //   selectedChatId = null;
+                        // });
                       },
                     ),
                   InkWell(

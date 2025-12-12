@@ -184,11 +184,29 @@ class _MyAppState extends State<MyApp> {
       }
       lastMessageId = message.messageId;
       if (incomingChatId != null) {
+        final sentAt = data['sentAt'] ??
+            data['timestamp'] ??
+            DateTime.now().toIso8601String();
+
+        final content =
+            data['message'] ?? data['text'] ?? data['content'] ?? "";
+
         if (isGroup) {
-          Get.find<GroupUnreadCountController>()
-              .incrementGroupUnread(incomingChatId);
+          Get.find<GroupUnreadCountController>().incrementGroupUnread(
+            incomingChatId,
+            lastMessageData: {
+              "text": content,
+              "sentAt": sentAt,
+            },
+          );
         } else {
-          Get.find<UnreadCountController>().incrementUnread(incomingChatId);
+          Get.find<UnreadCountController>().incrementUnreadWithLastMessage(
+            incomingChatId,
+            lastMessageData: {
+              "text": content,
+              "sentAt": sentAt,
+            },
+          );
         }
       }
 

@@ -30,7 +30,6 @@ class GroupUnreadCountController extends GetxController {
     });
 
     _socketService.newMessageStream.listen(_onNewGroupMessageReceived);
-    _socketService.messageStream.listen(_onNewGroupMessageReceived);
     _socketService.messagesReadStream.listen(_onGroupMessagesRead);
     log("📡 GroupUnreadCountController Initialized");
   }
