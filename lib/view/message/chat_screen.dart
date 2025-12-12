@@ -188,6 +188,7 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   late StreamSubscription _unpinnedMessageSubscription;
+
   final List<String> emojiReactions = [
     "👍",
     "❤️",
@@ -5984,11 +5985,6 @@ class _ChatScreenState extends State<ChatScreen>
       messages[chatId] = [...messages[chatId]!, newMessage];
     });
 
-    // ✅ FIX: Only show notification if chat is NOT open
-    if (!isCurrentChat) {
-      _showNotificationIfNeeded(chatId, newMessage, isGroupMessage);
-    }
-
     if (isCurrentChat) {
       _cleanupMessageKeys();
       if (_isUserAtBottom) {
@@ -6003,7 +5999,7 @@ class _ChatScreenState extends State<ChatScreen>
     }
 
     // Update chat's last message and timestamp
-    _updateChatLastMessage(chatId, newMessage);
+    // _updateChatLastMessage(chatId, newMessage);
 
     // Force chat list to resort
     setState(() {
@@ -6096,80 +6092,6 @@ class _ChatScreenState extends State<ChatScreen>
     );
   }
 
-  Future<void> _showNotificationIfNeeded(
-      String chatId, Message message, bool isGroup) async {
-    // Get sender information from the message
-    String senderName = message.sender.name ?? 'Unknown';
-    String groupName = '';
-    String? avatar = '';
-
-    if (isGroup) {
-      // Get group info from your groups list
-      final group = groups.firstWhere((g) => g.id == chatId);
-      groupName = group.name.toString();
-      avatar = group.groupAvatar;
-
-      // For groups, use the sender's avatar if available
-      avatar = message.sender.avatar ?? avatar;
-    } else {
-      // Get direct chat info from directChats
-      final chat = directChats.firstWhere((c) => c.id == chatId);
-
-      // For direct chats, use the sender's name and avatar
-      senderName = message.sender.name ?? chat.name ?? 'Unknown';
-      avatar = message.sender.avatar;
-    }
-
-    await NotificationService().showMessageNotification(
-      chatId: chatId,
-      senderName: senderName,
-      message: message.content,
-      isGroup: isGroup,
-      groupName: groupName,
-      avatar: avatar,
-    );
-  }
-
-  void _updateChatLastMessage(String chatId, Message message) {
-    // Update direct chats
-    final directChatIndex = directChats.indexWhere((chat) => chat.id == chatId);
-    if (directChatIndex != -1) {
-      setState(() {
-        directChats[directChatIndex] = Chat(
-          id: directChats[directChatIndex].id,
-          name: directChats[directChatIndex].name,
-          avatar: directChats[directChatIndex].avatar,
-          lastMessage: message.content,
-          timestamp: message.timestamp, // Update with latest message timestamp
-          // unread:
-          //     unreadCounts[chatId] ?? directChats[directChatIndex].unread + 1,
-          isGroup: directChats[directChatIndex].isGroup,
-          participants: directChats[directChatIndex].participants,
-        );
-
-        // ✅ Move updated chat to top
-        final updatedChat = directChats.removeAt(directChatIndex);
-        directChats.insert(0, updatedChat);
-      });
-    }
-
-    // Update groups similarly if needed
-    final groupIndex = groups.indexWhere((group) => group.id == chatId);
-    if (groupIndex != -1) {
-      setState(() {
-        // Update group last message timestamp
-        // Move to top of groups list
-        final updatedGroup = groups.removeAt(groupIndex);
-        groups.insert(0, updatedGroup);
-      });
-    }
-
-    // Trigger sorting after update
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _sortChatsSafely();
-    });
-  }
-
   // Handle group deletion from server
   void _handleGroupDeleted(Map<String, dynamic> data) {
     final String deletedGroupId = data['groupId'] ?? '';
@@ -6193,8 +6115,6 @@ class _ChatScreenState extends State<ChatScreen>
     );
   }
 
-  // Method to handle group deletion
-  // Method to handle group deletion
   void handleDeleteGroup() {
     if (selectedGroup == null || currentUserId == null) {
       return;
@@ -6736,12 +6656,11 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   void _showMemberOptionsDialog(BuildContext context, GroupMember member) {
-    // final userInfo = member.userInfo; // Use getter
-
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           title: Row(
             children: [
               CircleAvatar(
@@ -6762,8 +6681,12 @@ class _ChatScreenState extends State<ChatScreen>
               Expanded(
                 child: Text(
                   member.userId.fullName,
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    fontFamily: AppFonts.opensansRegular,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                  ),
                 ),
               ),
             ],
@@ -6773,38 +6696,47 @@ class _ChatScreenState extends State<ChatScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
+                // ignore: unnecessary_null_comparison
                 'Member since: ${member.joinedAt != null ? DateFormat.yMMMd().format(DateTime.parse(member.joinedAt)) : member.joinedAt}',
                 style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey[600],
-                ),
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                    fontFamily: AppFonts.opensansRegular),
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'What would you like to do?',
-                style: TextStyle(fontSize: 16),
+                style: TextStyle(
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                  fontSize: 16,
+                  fontFamily: AppFonts.opensansRegular,
+                ),
               ),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text(
+              child: Text(
                 'Cancel',
-                style: TextStyle(color: Colors.black),
+                style: TextStyle(
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                  fontSize: 16,
+                  fontFamily: AppFonts.opensansRegular,
+                ),
               ),
             ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                startPrivateChatWithMember(member);
-              },
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.blue,
-              ),
-              // icon: const Icon(Icons.message),
-              child: const Text('Message'),
-            ),
+            // TextButton(
+            //   onPressed: () {
+            //     Navigator.of(context).pop();
+            //     startPrivateChatWithMember(member);
+            //   },
+            //   style: TextButton.styleFrom(
+            //     foregroundColor: Colors.blue,
+            //   ),
+            //   // icon: const Icon(Icons.message),
+            //   child: const Text('Message'),
+            // ),
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
@@ -6958,20 +6890,35 @@ class _ChatScreenState extends State<ChatScreen>
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: const Text('Report User'),
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+              title: Text(
+                'Report User',
+                style: TextStyle(
+                  fontFamily: AppFonts.opensansRegular,
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                ),
+              ),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                        'Please provide details about the issue you\'re reporting.'),
+                    Text(
+                      'Please provide details about the issue you\'re reporting.',
+                      style: TextStyle(
+                        fontFamily: AppFonts.opensansRegular,
+                        color: Theme.of(context).textTheme.bodyLarge?.color,
+                      ),
+                    ),
                     const SizedBox(height: 16),
 
                     // Reported User (read-only)
-                    const Text(
+                    Text(
                       'Reported User',
-                      style: TextStyle(fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                          fontFamily: AppFonts.opensansRegular,
+                          color: Theme.of(context).textTheme.bodyLarge?.color,
+                          fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
                     Container(
@@ -6980,19 +6927,24 @@ class _ChatScreenState extends State<ChatScreen>
                       decoration: BoxDecoration(
                         border: Border.all(color: Colors.grey.shade300),
                         borderRadius: BorderRadius.circular(8),
-                        color: Colors.grey.shade100,
                       ),
                       child: Text(
                         member.userId.fullName,
-                        style: const TextStyle(fontSize: 16),
+                        style: TextStyle(
+                          fontFamily: AppFonts.opensansRegular,
+                          color: Theme.of(context).textTheme.bodyLarge?.color,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
 
                     // Reason dropdown
-                    const Text(
+                    Text(
                       'Reason',
-                      style: TextStyle(fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                          fontFamily: AppFonts.opensansRegular,
+                          color: Theme.of(context).textTheme.bodyLarge?.color,
+                          fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
                     Container(
@@ -7005,7 +6957,14 @@ class _ChatScreenState extends State<ChatScreen>
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
                           value: _selectedReportReason,
-                          hint: const Text('Select a reason'),
+                          hint: Text(
+                            'Select a reason',
+                            style: TextStyle(
+                              fontFamily: AppFonts.opensansRegular,
+                              color:
+                                  Theme.of(context).textTheme.bodyLarge?.color,
+                            ),
+                          ),
                           isExpanded: true,
                           items: [
                             'spam',
@@ -7016,7 +6975,12 @@ class _ChatScreenState extends State<ChatScreen>
                           ].map((String value) {
                             return DropdownMenuItem<String>(
                               value: value,
-                              child: Text(value),
+                              child: Text(
+                                value,
+                                style: TextStyle(
+                                    fontFamily: AppFonts.opensansRegular,
+                                    color: AppColors.greyColor),
+                              ),
                             );
                           }).toList(),
                           onChanged: (String? newValue) {
@@ -7030,9 +6994,12 @@ class _ChatScreenState extends State<ChatScreen>
                     const SizedBox(height: 16),
 
                     // Description
-                    const Text(
+                    Text(
                       'Description',
-                      style: TextStyle(fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                          fontFamily: AppFonts.opensansRegular,
+                          color: Theme.of(context).textTheme.bodyLarge?.color,
+                          fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
                     TextField(
@@ -7041,6 +7008,10 @@ class _ChatScreenState extends State<ChatScreen>
                       decoration: InputDecoration(
                         hintText:
                             'Please provide additional details about the report...',
+                        hintStyle: TextStyle(
+                            fontFamily: AppFonts.opensansRegular,
+                            color: Theme.of(context).textTheme.bodyLarge?.color,
+                            fontWeight: FontWeight.bold),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -7055,15 +7026,27 @@ class _ChatScreenState extends State<ChatScreen>
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancel'),
+                  child: Text(
+                    'Cancel',
+                    style: TextStyle(
+                      fontFamily: AppFonts.opensansRegular,
+                      color: Theme.of(context).textTheme.bodyLarge?.color,
+                    ),
+                  ),
                 ),
                 ElevatedButton(
                   onPressed: () => _submitReport(context, member),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
+                    backgroundColor: Colors.transparent,
                     foregroundColor: Colors.white,
                   ),
-                  child: const Text('Submit Report'),
+                  child: Text(
+                    'Submit Report',
+                    style: TextStyle(
+                        fontFamily: AppFonts.opensansRegular,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.redColor),
+                  ),
                 ),
               ],
             );
@@ -7078,8 +7061,14 @@ class _ChatScreenState extends State<ChatScreen>
       // Validation
       if (_selectedReportReason == null || _selectedReportReason!.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Please fill in all required fields"),
+          SnackBar(
+            content: Text(
+              "Please fill in all required fields",
+              style: TextStyle(
+                fontFamily: AppFonts.opensansRegular,
+                color: Theme.of(context).textTheme.bodyLarge?.color,
+              ),
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -7217,117 +7206,118 @@ class _ChatScreenState extends State<ChatScreen>
           ),
         ),
         // Group Info Section
-        Padding(
-          padding: const EdgeInsets.only(left: 22.0, top: 8.0, bottom: 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Card(
-                  margin:
-                      const EdgeInsets.symmetric(horizontal: 2, vertical: 12),
-                  elevation: 4,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16)),
-                  color: Colors.teal,
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          group.name ?? "",
-                          style: const TextStyle(
-                              fontSize: 20, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          description ?? 'no description',
-                          style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.black,
-                              fontFamily: AppFonts.opensansRegular),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Created At: $createdAtFormatted',
-                          style: TextStyle(
-                              fontSize: 16,
-                              fontFamily: AppFonts.opensansRegular),
-                        ),
-                        Text(
-                          'Group Admin: $groupAdminName',
-                          style: TextStyle(
-                              fontSize: 16,
-                              fontFamily: AppFonts.opensansRegular),
-                        ),
-                        Text(
-                          'Total Members: $totalMembers',
-                          style: TextStyle(
-                              fontSize: 16,
-                              fontFamily: AppFonts.opensansRegular),
-                        ),
-                        const SizedBox(height: 8),
-                        if (isAdmin)
-                          Row(
-                            children: [
-                              const Icon(Icons.link, size: 18),
-                              const SizedBox(width: 4),
-                              GestureDetector(
-                                onTap: () async {
-                                  if (inviteLink == null) {
-                                    // Generate link first
-                                    await _generateInviteLink();
-                                  }
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Card(
+                margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 12),
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
+                color: Colors.blueGrey,
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 80, vertical: 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        group.name ?? "",
+                        style: TextStyle(
+                            color: Theme.of(context).textTheme.bodyLarge?.color,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        description ?? 'no description',
+                        style: TextStyle(
+                            fontSize: 14,
+                            color: Theme.of(context).textTheme.bodyLarge?.color,
+                            fontFamily: AppFonts.opensansRegular),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Created At: $createdAtFormatted',
+                        style: TextStyle(
+                            fontSize: 16,
+                            color: Theme.of(context).textTheme.bodyLarge?.color,
+                            fontFamily: AppFonts.opensansRegular),
+                      ),
+                      Text(
+                        'Group Admin: $groupAdminName',
+                        style: TextStyle(
+                            fontSize: 16,
+                            color: Theme.of(context).textTheme.bodyLarge?.color,
+                            fontFamily: AppFonts.opensansRegular),
+                      ),
+                      Text(
+                        'Total Members: $totalMembers',
+                        style: TextStyle(
+                            fontSize: 16,
+                            color: Theme.of(context).textTheme.bodyLarge?.color,
+                            fontFamily: AppFonts.opensansRegular),
+                      ),
+                      const SizedBox(height: 8),
+                      if (isAdmin)
+                        Row(
+                          children: [
+                            const Icon(Icons.link, size: 18),
+                            const SizedBox(width: 4),
+                            GestureDetector(
+                              onTap: () async {
+                                if (inviteLink == null) {
+                                  // Generate link first
+                                  await _generateInviteLink();
+                                }
 
-                                  if (inviteLink != null) {
-                                    _showInviteLinkDialog();
-                                  }
-                                },
-                                child: isGeneratingLink
-                                    ? Row(
-                                        children: [
-                                          SizedBox(
-                                            width: 16,
-                                            height: 16,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              valueColor:
-                                                  AlwaysStoppedAnimation<Color>(
-                                                Theme.of(context).primaryColor,
-                                              ),
+                                if (inviteLink != null) {
+                                  _showInviteLinkDialog();
+                                }
+                              },
+                              child: isGeneratingLink
+                                  ? Row(
+                                      children: [
+                                        SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                              Theme.of(context).primaryColor,
                                             ),
                                           ),
-                                          const SizedBox(width: 8),
-                                          const Text(
-                                            'Generating...',
-                                            style: TextStyle(
-                                              color: Colors.grey,
-                                              fontSize: 14,
-                                            ),
-                                          ),
-                                        ],
-                                      )
-                                    : Text(
-                                        inviteLink == null
-                                            ? 'Generate invite link'
-                                            : 'Share invite link',
-                                        style: TextStyle(
-                                          color: AppColors.redColor,
-                                          decoration: TextDecoration.underline,
                                         ),
+                                        const SizedBox(width: 8),
+                                        const Text(
+                                          'Generating...',
+                                          style: TextStyle(
+                                            color: Colors.grey,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  : Text(
+                                      inviteLink == null
+                                          ? 'Generate invite link'
+                                          : 'Share invite link',
+                                      style: TextStyle(
+                                        color: AppColors.redColor,
+                                        decoration: TextDecoration.underline,
                                       ),
-                              ),
-                            ],
-                          ),
-                      ],
-                    ),
+                                    ),
+                            ),
+                          ],
+                        ),
+                    ],
                   ),
                 ),
-              )
-            ],
-          ),
+              ),
+            )
+          ],
         ),
         // Members list
         Expanded(
@@ -7374,8 +7364,13 @@ class _ChatScreenState extends State<ChatScreen>
                                   children: [
                                     Text(
                                       member.userId.fullName,
-                                      style: const TextStyle(
-                                        fontSize: 16.0,
+                                      style: TextStyle(
+                                        color: Theme.of(context)
+                                            .textTheme
+                                            .bodyLarge
+                                            ?.color,
+                                        fontSize: 16,
+                                        fontFamily: AppFonts.opensansRegular,
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
@@ -7394,6 +7389,8 @@ class _ChatScreenState extends State<ChatScreen>
                                           style: TextStyle(
                                             fontSize: 12,
                                             color: Colors.blue[800],
+                                            fontFamily:
+                                                AppFonts.opensansRegular,
                                             fontWeight: FontWeight.w500,
                                           ),
                                         ),
@@ -7406,6 +7403,7 @@ class _ChatScreenState extends State<ChatScreen>
                                   style: TextStyle(
                                     fontSize: 14.0,
                                     color: Colors.grey[600],
+                                    fontFamily: AppFonts.opensansRegular,
                                   ),
                                 ),
                               ],

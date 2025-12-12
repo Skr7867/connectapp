@@ -36,7 +36,6 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   bool get wantKeepAlive => true;
 
-
   Future<void> onRefresh() async {
     await userData.refreshApi(); // manual refresh updates both local + UI
   }
@@ -330,13 +329,6 @@ class _HomeScreenState extends State<HomeScreen>
               border: Border.all(color: Colors.grey.shade300, width: 1),
               borderRadius: BorderRadius.circular(16),
               color: AppColors.loginContainerColor,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.shade200,
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
             ),
             child: Column(
               children: [

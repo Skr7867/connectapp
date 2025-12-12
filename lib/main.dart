@@ -40,7 +40,7 @@ String? lastMessageId;
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  NotificationService().showNotification(message);
+  // NotificationService().showNotification(message);
 }
 
 Future<void> main() async {
