@@ -2701,7 +2701,6 @@ class _ChatScreenState extends State<ChatScreen>
               isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            // ✅ Add forwarded header for stickers
             Flexible(
               child: Column(
                 crossAxisAlignment:
@@ -2910,12 +2909,13 @@ class _ChatScreenState extends State<ChatScreen>
       return Column(
         children: [
           if (message.isForwarded == true && !isMe) ...[
+            const SizedBox(height: 10),
             _buildForwardedHeader(message),
-            const SizedBox(height: 4),
+            // const SizedBox(height: 4),
           ],
           if (isGroup && !isMe)
             SizedBox(
-              height: 10,
+              height: 1,
             ),
           if (isGroup && !isMe)
             Padding(
@@ -3041,32 +3041,32 @@ class _ChatScreenState extends State<ChatScreen>
                                   children: [
                                     // Forwarded indicator
                                     if (message.isForwarded == true) ...[
-                                      Row(
-                                        children: [
-                                          Icon(
-                                            Icons.forward,
-                                            size: 14,
-                                            color: isMe
-                                                ? Colors.grey[600]
-                                                : Colors.white.withOpacity(0.8),
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            'Forwarded',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: isMe
-                                                  ? Colors.grey[600]
-                                                  : Colors.white
-                                                      .withOpacity(0.8),
-                                              fontStyle: FontStyle.italic,
-                                              fontFamily:
-                                                  AppFonts.opensansRegular,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
+                                      // Row(
+                                      //   children: [
+                                      //     Icon(
+                                      //       Icons.forward,
+                                      //       size: 14,
+                                      //       color: isMe
+                                      //           ? Colors.grey[600]
+                                      //           : Colors.white.withOpacity(0.8),
+                                      //     ),
+                                      //     const SizedBox(width: 4),
+                                      //     Text(
+                                      //       'Forwarded',
+                                      //       style: TextStyle(
+                                      //         fontSize: 12,
+                                      //         color: isMe
+                                      //             ? Colors.grey[600]
+                                      //             : Colors.white
+                                      //                 .withOpacity(0.8),
+                                      //         fontStyle: FontStyle.italic,
+                                      //         fontFamily:
+                                      //             AppFonts.opensansRegular,
+                                      //         fontWeight: FontWeight.w500,
+                                      //       ),
+                                      //     ),
+                                      //   ],
+                                      // ),
                                       const SizedBox(height: 8),
                                     ],
 
@@ -6045,7 +6045,7 @@ class _ChatScreenState extends State<ChatScreen>
           child: InkWell(
             borderRadius: BorderRadius.circular(25),
             onTap: () {
-              // ✅ Fix scroll to bottom
+              //Fix scroll to bottom
               _scrollToBottom(force: true);
             },
             child: Container(
@@ -7759,25 +7759,6 @@ class _ChatScreenState extends State<ChatScreen>
     );
   }
 
-// Helper function to wait for new chat to appear and select it
-  void _waitForNewChatAndSelect(User user) {
-    // This is a simple approach - you might want to implement a more sophisticated listener
-    Future.delayed(Duration(milliseconds: 500), () {
-      try {
-        final newChat = directChats.firstWhere(
-          (chat) => chat.participants?.any((p) => p.id == user.id) == true,
-        );
-        setState(() {
-          selectedChatId = newChat.id;
-        });
-      } catch (e) {
-        // Chat not yet available, you might want to retry or handle differently
-
-        _waitForNewChatAndSelect(user);
-      }
-    });
-  }
-
   void _scrollToBottom({bool force = false, bool isInitialLoad = false}) {
     if (!_scrollController.hasClients) {
       // Schedule scroll for next frame if controller not ready
@@ -7810,34 +7791,6 @@ class _ChatScreenState extends State<ChatScreen>
         }
       });
     }
-  }
-
-// Method to scroll to first unread message
-// Method to scroll to first unread message
-  void _scrollToFirstUnreadMessage() {
-    if (!_scrollController.hasClients || selectedChatId == null) return;
-
-    final currentMessages = messages[selectedChatId] ?? [];
-    if (currentMessages.isEmpty) return;
-
-    // Find the first unread message (you can customize this logic based on your needs)
-    final currentUserId = this.currentUserId;
-
-    if (currentUserId == null) return;
-
-    // For simplicity, scroll to a position based on unread count
-    // final unreadCount = unreadCounts[selectedChatId!] ?? 0;
-    // if (unreadCount > 0 && currentMessages.length >= unreadCount) {
-    //   final targetIndex = currentMessages.length - unreadCount;
-    //   final itemHeight = 80.0; // Approximate height per message
-    //   final targetPosition = targetIndex * itemHeight;
-
-    //   _scrollController.animateTo(
-    //     targetPosition,
-    //     duration: const Duration(milliseconds: 500),
-    //     curve: Curves.easeInOut,
-    //   );
-    // }
   }
 
   String _formatTime(dynamic timestamp) {
@@ -8302,7 +8255,7 @@ class _ChatScreenState extends State<ChatScreen>
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  // ✅ FIXED TIME DISPLAY
+                  //  FIXED TIME DISPLAY
                   Text(
                     formattedTime,
                     style: TextStyle(
@@ -8633,13 +8586,6 @@ class _ChatScreenState extends State<ChatScreen>
                       fontFamily: AppFonts.opensansRegular),
                 ),
                 const SizedBox(height: 2),
-                // Text(
-                //   replyingToMessage!.content,
-                //   style: const TextStyle(fontSize: 12, color: Colors.grey),
-                //   maxLines: 2,
-                //   overflow: TextOverflow.ellipsis,
-                // ),
-
                 _buildReplyPreviews(replyingToMessage!),
               ],
             ),
@@ -10120,22 +10066,20 @@ class _ChatScreenState extends State<ChatScreen>
 
   Widget _buildDateSeparator(DateTime date) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 16),
-      child: Row(
-        children: [
-          const Expanded(child: Divider()),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              _formatDateSeparator(date),
-              style: const TextStyle(
-                color: Colors.grey,
-                fontSize: 12,
-              ),
-            ),
-          ),
-          const Expanded(child: Divider()),
-        ],
+      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 3),
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: AppColors.greyColor.withOpacity(0.2),
+        ),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: Text(
+        _formatDateSeparator(date),
+        style: const TextStyle(
+          color: Colors.grey,
+          fontSize: 12,
+        ),
       ),
     );
   }

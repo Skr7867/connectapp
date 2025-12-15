@@ -230,11 +230,9 @@ class _MyAppState extends State<MyApp> {
   void _navigateFromMessage(RemoteMessage message) {
     try {
       if (AppLifecycleService.isDeepLinkActive) {
-        print("Skipping: Deep link is already navigating");
         return;
       }
       if (isDeepLinkHandled) {
-        log("Skipping FCM navigation — deep link already handled");
         return;
       }
 
