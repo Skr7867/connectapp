@@ -38,19 +38,47 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- HTTPS DEEP LINKS (AUTO VERIFY = TRUE) -->
-            <intent-filter android:autoVerify="true">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <!-- Deep link endpoints -->
-                <data android:scheme="https" android:host="connectapp.cc" android:pathPrefix="/clip" />
-                 <data android:scheme="https" android:host="connectapp.cc" android:pathPrefix="/space" />
-                <data android:scheme="https" android:host="connectapp.cc" android:pathPrefix="/course" />
-                <data android:scheme="https" android:host="connectapp.cc" android:pathPrefix="/ref" />
-                <data android:scheme="https" android:host="connectapp.cc" android:pathPrefix="/register" />
+               <!-- HTTPS DEEP LINKS (AUTO VERIFY = TRUE) -->
+               <!-- CLIP -->
+              <intent-filter android:autoVerify="true">
+              <action android:name="android.intent.action.VIEW" />
+              <category android:name="android.intent.category.DEFAULT" />
+              <category android:name="android.intent.category.BROWSABLE" />
+              <data android:scheme="https" android:host="connectapp.cc" android:pathPrefix="/clip" />
             </intent-filter>
+
+<!-- SPACE -->
+            <intent-filter android:autoVerify="true">
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="https" android:host="connectapp.cc" android:pathPrefix="/space" />
+            </intent-filter>
+
+<!-- COURSE -->
+             <intent-filter android:autoVerify="true">
+             <action android:name="android.intent.action.VIEW" />
+             <category android:name="android.intent.category.DEFAULT" />
+             <category android:name="android.intent.category.BROWSABLE" />
+             <data android:scheme="https" android:host="connectapp.cc" android:pathPrefix="/course" />
+             </intent-filter>
+
+<!-- REF -->
+<intent-filter android:autoVerify="true">
+    <action android:name="android.intent.action.VIEW" />
+    <category android:name="android.intent.category.DEFAULT" />
+    <category android:name="android.intent.category.BROWSABLE" />
+    <data android:scheme="https" android:host="connectapp.cc" android:pathPrefix="/ref" />
+</intent-filter>
+
+<!-- REGISTER -->
+<intent-filter android:autoVerify="true">
+    <action android:name="android.intent.action.VIEW" />
+    <category android:name="android.intent.category.DEFAULT" />
+    <category android:name="android.intent.category.BROWSABLE" />
+    <data android:scheme="https" android:host="connectapp.cc" android:pathPrefix="/register" />
+</intent-filter>
+
 
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"

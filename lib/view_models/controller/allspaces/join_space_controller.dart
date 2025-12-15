@@ -14,6 +14,30 @@ class JoinSpaceController extends GetxController {
 
   void setLoading(bool value) => rxRequestStatus.value = value;
   void setError(String value) => error.value = value;
+
+  Future<String?> getRoomUrl(String spaceId) async {
+    final url = "${ApiUrls.joinSpaceApi}/$spaceId";
+
+    final loginData = await _prefs.getUser();
+    if (loginData == null) return null;
+
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ${loginData.token}',
+      },
+      body: "{}",
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['roomUrl'];
+    }
+
+    return null;
+  }
+
   Future<String?> joinSpace(String spaceId) async {
     if (spaceId.isEmpty) {
       Utils.snackBar("Error", "Invalid space ID.");
