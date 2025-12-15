@@ -14,7 +14,6 @@ class JoinSpaceController extends GetxController {
 
   void setLoading(bool value) => rxRequestStatus.value = value;
   void setError(String value) => error.value = value;
-
   Future<String?> joinSpace(String spaceId) async {
     if (spaceId.isEmpty) {
       Utils.snackBar("Error", "Invalid space ID.");

@@ -4262,7 +4262,7 @@ class _ChatScreenState extends State<ChatScreen>
 
                   // Timestamp
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                    padding: const EdgeInsets.fromLTRB(16, 2, 4, 7),
                     child: Row(
                       mainAxisAlignment: isMe
                           ? MainAxisAlignment.end
@@ -4273,7 +4273,7 @@ class _ChatScreenState extends State<ChatScreen>
                           style: TextStyle(
                             fontSize: 10,
                             color: isImage || isVideo
-                                ? Colors.white.withOpacity(0.9)
+                                ? Colors.grey
                                 : (isMe ? Colors.grey[600] : Colors.white70),
                             fontWeight: FontWeight.w500,
                           ),
@@ -4654,7 +4654,7 @@ class _ChatScreenState extends State<ChatScreen>
           name: old.name,
           avatar: old.avatar,
           lastMessage: lastMessageText,
-          timestamp: lastTimestamp, // ⬅ NEW TIMESTAMP
+          timestamp: lastTimestamp,
           isGroup: old.isGroup,
           isOnline: old.isOnline,
           senderName: old.senderName,
@@ -5360,7 +5360,7 @@ class _ChatScreenState extends State<ChatScreen>
 
             currentChatMessages[i].reactions =
                 reactionsData.map((reactionData) {
-              log('👤 Reaction data: $reactionData'); // Log each reaction
+              log('👤 Reaction data: $reactionData');
 
               try {
                 final reaction = Reaction.fromJson(reactionData);
@@ -5380,10 +5380,10 @@ class _ChatScreenState extends State<ChatScreen>
               }
             }).toList();
 
-            log('✅ Updated ${currentChatMessages[i].reactions?.length ?? 0} reactions for message');
+            log(' Updated ${currentChatMessages[i].reactions?.length ?? 0} reactions for message');
           } else {
             currentChatMessages[i].reactions = [];
-            log('🔄 No reactions found, setting empty list');
+            log(' No reactions found, setting empty list');
           }
           break;
         }
@@ -5526,80 +5526,74 @@ class _ChatScreenState extends State<ChatScreen>
     final displayEmojis = sortedEntries.take(3).toList();
     final remainingCount =
         sortedEntries.length > 3 ? sortedEntries.length - 3 : 0;
-    final totalReactions = reactions.length;
 
-    return Container(
-      margin: const EdgeInsets.only(top: 4),
-      child: Wrap(
-        spacing: 4,
-        children: [
-          // Display top 3 emojis
-          ...displayEmojis.map((entry) {
-            String emoji = entry.key;
-            List<Reaction> emojiReactions = entry.value;
-            bool hasCurrentUserReacted =
-                emojiReactions.any((r) => r.user.id == currentUserId);
+    // Check if current user has reacted with any emoji
+    bool hasCurrentUserReacted =
+        reactions.any((r) => r.user.id == currentUserId);
 
-            return GestureDetector(
-              onTap: () {
-                // Show all reactions when tapped
-                // _showAllReactionsBottomSheet(groupedReactions);
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: hasCurrentUserReacted
-                      ? Colors.blue[100]
-                      : Colors.grey[200],
-                  borderRadius: BorderRadius.circular(12),
-                  border: hasCurrentUserReacted
-                      ? Border.all(color: Colors.blue, width: 1)
-                      : null,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(emoji, style: const TextStyle(fontSize: 14)),
-                    const SizedBox(width: 4),
-                    Text(
-                      emojiReactions.length.toString(),
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: hasCurrentUserReacted
-                            ? Colors.blue[700]
-                            : Colors.grey[700],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }).toList(),
+    return GestureDetector(
+      onTap: () {
+        _showAllReactionsBottomSheet(groupedReactions);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(
+          // color: hasCurrentUserReacted
+          //     ? Colors.blue.withOpacity(0.1)
+          //     : Colors.grey[200],
+          borderRadius: BorderRadius.circular(12),
+          border: hasCurrentUserReacted
+              ? Border.all(color: AppColors.greyColor.withOpacity(0.3))
+              : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Display top 3 emojis in a row
+            ...displayEmojis.asMap().entries.map((entry) {
+              int index = entry.key;
+              var emojiEntry = entry.value;
+              String emoji = emojiEntry.key;
+              List<Reaction> emojiReactions = emojiEntry.value;
 
-          // Show "+X more" if there are more than 3 emoji types
-          if (remainingCount > 0)
-            GestureDetector(
-              onTap: () {
-                _showAllReactionsBottomSheet(groupedReactions);
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '+$remainingCount',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.grey[700],
-                  ),
-                ),
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (index > 0) const SizedBox(width: 1),
+                  Text(emoji, style: const TextStyle(fontSize: 14)),
+                ],
+              );
+            }).toList(),
+
+            const SizedBox(width: 4),
+
+            // Total count
+            Text(
+              reactions.length.toString(),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color:
+                    hasCurrentUserReacted ? Colors.blue[700] : Colors.grey[700],
               ),
             ),
-        ],
+
+            // Show "+X" if there are more than 3 emoji types
+            if (remainingCount > 0) ...[
+              const SizedBox(width: 2),
+              Text(
+                '+$remainingCount',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: hasCurrentUserReacted
+                      ? Colors.blue[600]
+                      : Colors.grey[600],
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -5641,7 +5635,7 @@ class _ChatScreenState extends State<ChatScreen>
 
             // Emoji tabs
             SizedBox(
-              height: 50,
+              height: 30,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 itemCount: groupedReactions.length,
@@ -5651,26 +5645,30 @@ class _ChatScreenState extends State<ChatScreen>
                     padding: const EdgeInsets.only(right: 8),
                     child: GestureDetector(
                       onTap: () {
-                        // _showReactionDetails(entry.key, entry.value);
+                        _showReactionDetails(entry.key, entry.value);
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
+                        width: 50,
+                        // padding: const EdgeInsets.symmetric(
+                        //     horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
-                          color: Colors.grey[200],
+                          border: Border.all(
+                            color: AppColors.greyColor.withOpacity(0.4),
+                          ),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Row(
                           children: [
+                            const SizedBox(width: 6),
                             Text(entry.key,
                                 style: const TextStyle(fontSize: 20)),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 2),
                             Text(
                               entry.value.length.toString(),
                               style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                              ),
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  fontFamily: AppFonts.opensansRegular),
                             ),
                           ],
                         ),
@@ -5697,14 +5695,16 @@ class _ChatScreenState extends State<ChatScreen>
                         child: Row(
                           children: [
                             Text(entry.key,
-                                style: const TextStyle(fontSize: 20)),
+                                style: const TextStyle(
+                                    fontSize: 20,
+                                    fontFamily: AppFonts.opensansRegular)),
                             const SizedBox(width: 8),
                             Text(
                               '${entry.value.length} ${entry.value.length == 1 ? 'person' : 'people'}',
                               style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey[600],
-                              ),
+                                  fontSize: 14,
+                                  color: Colors.grey[600],
+                                  fontFamily: AppFonts.opensansRegular),
                             ),
                           ],
                         ),
@@ -5714,7 +5714,7 @@ class _ChatScreenState extends State<ChatScreen>
                         return ListTile(
                           leading: CircleAvatar(
                             radius: 20,
-                            backgroundColor: Colors.transparent,
+                            backgroundColor: Colors.grey,
                             backgroundImage: reaction.user.avatar != null &&
                                     reaction.user.avatar!.isNotEmpty
                                 ? CacheImageLoader(
@@ -5739,14 +5739,14 @@ class _ChatScreenState extends State<ChatScreen>
                               Text(
                                 reaction.user.name,
                                 style: TextStyle(
-                                  fontWeight: isCurrentUser
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                  color: Theme.of(context)
-                                      .textTheme
-                                      .bodyLarge
-                                      ?.color,
-                                ),
+                                    fontWeight: isCurrentUser
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                    color: Theme.of(context)
+                                        .textTheme
+                                        .bodyLarge
+                                        ?.color,
+                                    fontFamily: AppFonts.opensansRegular),
                               ),
                               if (isCurrentUser) ...[
                                 const SizedBox(width: 8),
@@ -5760,18 +5760,20 @@ class _ChatScreenState extends State<ChatScreen>
                                   child: Text(
                                     'You',
                                     style: TextStyle(
-                                      fontSize: 10,
-                                      color: Colors.blue[800],
-                                      fontWeight: FontWeight.w500,
-                                    ),
+                                        fontSize: 10,
+                                        color: Colors.blue[800],
+                                        fontWeight: FontWeight.w500,
+                                        fontFamily: AppFonts.opensansRegular),
                                   ),
                                 ),
                               ],
                             ],
                           ),
                         );
-                      }).toList(),
-                      const Divider(),
+                      }),
+                      Divider(
+                        color: AppColors.greyColor.withOpacity(0.4),
+                      ),
                     ],
                   );
                 },
@@ -6194,11 +6196,17 @@ class _ChatScreenState extends State<ChatScreen>
 
   void _handleGroupDetails(Map<String, dynamic> data) {
     final groupData = data['group'];
-
     final messagesList = data['messages'] as List;
 
-    final transformedMessages =
-        messagesList.map((msg) => Message.fromJson(msg)).toList();
+    // ✅ FIX: Ensure reactions are parsed from the server data
+    final transformedMessages = messagesList.map((msg) {
+      final message = Message.fromJson(msg);
+
+      // Debug log to see if reactions are present
+      log('📨 Message ${message.id} has ${message.reactions?.length ?? 0} reactions');
+
+      return message;
+    }).toList();
 
     setState(() {
       messages[groupData['_id']] = transformedMessages;
@@ -6226,17 +6234,24 @@ class _ChatScreenState extends State<ChatScreen>
     final roomId = data['roomId'];
     final messagesList = data['messages'] as List;
 
-    final transformedMessages =
-        messagesList.map((msg) => Message.fromJson(msg)).toList();
+    // ✅ FIX: Ensure reactions are parsed from the server data
+    final transformedMessages = messagesList.map((msg) {
+      final message = Message.fromJson(msg);
+
+      // Debug log to see if reactions are present
+      log('📨 Message ${message.id} has ${message.reactions?.length ?? 0} reactions');
+
+      return message;
+    }).toList();
 
     setState(() {
       messages[roomId] = transformedMessages;
       selectedChatId = roomId;
-      _isLoadingMessages = false; // Clear initial loading state
-      _isLoadingOlderMessages = false; // Clear older messages loading state
-      // Initialize hasMore to true since we just loaded initial messages
+      _isLoadingMessages = false;
+      _isLoadingOlderMessages = false;
       _hasMoreMessages[roomId] = true;
     });
+
     _cleanupMessageKeys();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -9083,12 +9098,12 @@ class _ChatScreenState extends State<ChatScreen>
                                       ? "Online"
                                       : "Last seen ${formatLastSeen(status?.lastSeen)}",
                                   style: TextStyle(
-                                    fontSize: 12,
-                                    color: status?.isOnline == true
-                                        ? Colors.green
-                                        : AppColors.greyColor,
-                                    fontFamily: AppFonts.opensansRegular,
-                                  ),
+                                      fontSize: 12,
+                                      color: status?.isOnline == true
+                                          ? Colors.grey
+                                          : AppColors.greyColor,
+                                      fontFamily: AppFonts.opensansRegular,
+                                      fontWeight: FontWeight.bold),
                                 ),
                               if (chat.isGroup == true)
                                 Text(
@@ -9706,7 +9721,7 @@ class _ChatScreenState extends State<ChatScreen>
           onLongPress:
               isSending ? null : () => _showMessageOptions(message, isMe),
           child: Opacity(
-            opacity: isSending ? 0.7 : 1.0, // ✅ Visual feedback for sending
+            opacity: isSending ? 0.7 : 1.0,
             child: Container(
               key: key,
               child: AnimatedContainer(

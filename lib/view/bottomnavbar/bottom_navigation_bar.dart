@@ -42,27 +42,39 @@ class _BottomnavBarState extends State<BottomnavBar> {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      return Scaffold(
-        body: IndexedStack(
-          index: _navBarController.currentIndex.value,
-          children: [
-            HomeScreen(),
-            ChatScreen(directUserId: directUserId),
-            ReelsPage(),
-            NewCourseDesignScreen(),
-          ],
-        ),
-        bottomNavigationBar: CustomBottomNavBar(
-          currentIndex: _navBarController.currentIndex.value,
-          onTap: (index) {
-            _navBarController.currentIndex(index);
+      return WillPopScope(
+        onWillPop: () async {
+          // If NOT on Home tab → go to Home instead of closing app
+          if (_navBarController.currentIndex.value != 0) {
+            _navBarController.currentIndex(0);
+            return false; // Prevent app exit
+          }
 
-            if (index == 2) {
-              if (!_reelsManager.isInitialized.value) {
-                _reelsManager.refreshClips();
+          // If already on Home tab → allow exit
+          return true;
+        },
+        child: Scaffold(
+          body: IndexedStack(
+            index: _navBarController.currentIndex.value,
+            children: [
+              HomeScreen(),
+              ChatScreen(directUserId: directUserId),
+              ReelsPage(),
+              NewCourseDesignScreen(),
+            ],
+          ),
+          bottomNavigationBar: CustomBottomNavBar(
+            currentIndex: _navBarController.currentIndex.value,
+            onTap: (index) {
+              _navBarController.currentIndex(index);
+
+              if (index == 2) {
+                if (!_reelsManager.isInitialized.value) {
+                  _reelsManager.refreshClips();
+                }
               }
-            }
-          },
+            },
+          ),
         ),
       );
     });

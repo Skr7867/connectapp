@@ -46,6 +46,7 @@
 
                 <!-- Deep link endpoints -->
                 <data android:scheme="https" android:host="connectapp.cc" android:pathPrefix="/clip" />
+                 <data android:scheme="https" android:host="connectapp.cc" android:pathPrefix="/space" />
                 <data android:scheme="https" android:host="connectapp.cc" android:pathPrefix="/course" />
                 <data android:scheme="https" android:host="connectapp.cc" android:pathPrefix="/ref" />
                 <data android:scheme="https" android:host="connectapp.cc" android:pathPrefix="/register" />

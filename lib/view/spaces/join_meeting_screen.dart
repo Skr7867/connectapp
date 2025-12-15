@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../res/color/app_colors.dart';
+import '../../res/routes/routes_name.dart';
 import '../../utils/utils.dart';
 import '../../view_models/controller/allspaces/join_space_controller.dart';
 
@@ -34,7 +35,18 @@ class JoinMeetingScreen extends StatelessWidget {
     return Scaffold(
       appBar: CustomAppBar(
         title: 'Space',
-        automaticallyImplyLeading: true,
+        // automaticallyImplyLeading: true,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back,
+              color: Theme.of(context).textTheme.bodyLarge?.color),
+          onPressed: () {
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else {
+              Get.offAllNamed(RouteName.bottomNavbar);
+            }
+          },
+        ),
       ),
       body: Container(
         color: Theme.of(context).scaffoldBackgroundColor,
@@ -157,10 +169,21 @@ class JoinMeetingScreen extends StatelessWidget {
                         child: Center(
                           child: IconButton(
                             onPressed: () async {
+                              final spaceId = space.sId;
                               String deepLink =
-                                  "https://play.google.com/store/apps/details?id=app.connectapp.com&pcampaignid=web_share";
+                                  "https://connectapp.cc/space/$spaceId";
+                              const playStoreLink =
+                                  'https://play.google.com/store/apps/details?id=app.connectapp.com';
+
+                              final message = '''
+Check out this space on ConnectApp!
+
+$deepLink
+If you don't have the app, download it here:
+$playStoreLink
+''';
                               await Share.share(
-                                'Check out this Space: $deepLink',
+                                message.trim(),
                                 subject: 'Share Space',
                               );
                             },

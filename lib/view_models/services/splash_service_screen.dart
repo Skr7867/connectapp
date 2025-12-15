@@ -68,6 +68,14 @@ class SplashServices {
             isDeepLinkHandled = true;
             Get.offAllNamed(RouteName.clipPlayScreen, arguments: clipId);
             return;
+          } else if (first == 'space' && uri.pathSegments.length > 1) {
+            final spaceId = uri.pathSegments[1];
+            log('Navigating to space: $spaceId');
+            isDeepLinkHandled = true;
+            Get.offAllNamed(
+              RouteName.newMeetingScreen,
+            );
+            return;
           }
         }
       }
@@ -84,6 +92,10 @@ class SplashServices {
           log(' Navigating (custom scheme) clip: $id');
           isDeepLinkHandled = true;
           Get.offAllNamed(RouteName.clipPlayScreen, arguments: id);
+          return;
+        } else if (host == 'space' && id != null) {
+          isDeepLinkHandled = true;
+          Get.toNamed(RouteName.joinMeeting, arguments: id);
           return;
         }
       }

@@ -1,5 +1,7 @@
 import 'package:flutter/cupertino.dart';
 
+import '../../../res/api_urls/api_urls.dart';
+
 class Chat {
   final String id;
   final String name;
@@ -92,22 +94,34 @@ class Reaction {
   });
 
   factory Reaction.fromJson(Map<String, dynamic> json) {
-    debugPrint('Reaction JSON: $json'); // Debug print
-    debugPrint('User field type: ${json['user'].runtimeType}'); // Debug print
-    debugPrint('User field value: ${json['user']}'); // Debug print
+    debugPrint('Reaction JSON: $json');
 
-    // Handle case where user might be a string ID instead of an object
     Sender user;
     if (json['user'] is String) {
-      // If user is just an ID string, create a minimal Sender object
       user = Sender(
         id: json['user'],
-        name: 'Unknown User', // Default name
+        name: json['userName'] ?? 'Unknown User',
         avatar: null,
       );
     } else if (json['user'] is Map<String, dynamic>) {
-      // If user is a full object, parse it normally
-      user = Sender.fromJson(json['user']);
+      final userData = json['user'] as Map<String, dynamic>;
+
+      // ✅ FIX: Handle avatar being just an ID string
+      String? avatarUrl;
+      if (userData['avatar'] != null) {
+        if (userData['avatar'] is String) {
+          // Avatar is just an ID, construct the full URL
+          avatarUrl = '${ApiUrls.baseUrl}/uploads/${userData['avatar']}';
+        } else if (userData['avatar'] is Map) {
+          avatarUrl = userData['avatar']['imageUrl'];
+        }
+      }
+
+      user = Sender(
+        id: userData['_id'] ?? userData['id'],
+        name: userData['fullName'] ?? userData['name'] ?? 'Unknown User',
+        avatar: avatarUrl,
+      );
     } else {
       throw Exception('Invalid user data type: ${json['user'].runtimeType}');
     }
@@ -695,4 +709,3 @@ class CreatedBy {
     };
   }
 }
-// services/socket_service.dart

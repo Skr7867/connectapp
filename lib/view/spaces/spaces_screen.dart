@@ -45,7 +45,7 @@ class _SpacesScreenState extends State<SpacesScreen> {
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60),
           child: Container(
-            margin: EdgeInsets.symmetric(horizontal: 20),
+            margin: EdgeInsets.symmetric(horizontal: 10),
             decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(10),
                 color: AppColors.textfieldColor),
@@ -119,7 +119,7 @@ class _SpacesScreenState extends State<SpacesScreen> {
       child: Stack(
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
             decoration: BoxDecoration(
               color: isSelected
                   ? Theme.of(context).scaffoldBackgroundColor
