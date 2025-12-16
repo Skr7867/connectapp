@@ -267,12 +267,17 @@ class _HomeScreenState extends State<HomeScreen>
     return Obx(() => Stack(
           children: [
             IconButton(
-              icon: Icon(
-                Icons.notifications,
-                color: Theme.of(context).textTheme.bodyLarge?.color,
-              ),
-              onPressed: () => Get.toNamed(RouteName.notificationScreen),
-            ),
+                icon: Icon(
+                  Icons.notifications,
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                ),
+                // onPressed: () => Get.toNamed(RouteName.notificationScreen),
+                onPressed: () {
+                  Future.microtask(() {
+                    Get.toNamed(RouteName.notificationScreen,
+                        preventDuplicates: false);
+                  });
+                }),
             if (controller.unreadCount.value > 0)
               Positioned(
                 right: 10,
