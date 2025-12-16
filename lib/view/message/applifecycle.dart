@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import '../../res/routes/routes_name.dart';
-import 'notificationservice.dart';
 
 class AppLifecycleService with WidgetsBindingObserver {
   static final AppLifecycleService _instance = AppLifecycleService._internal();
@@ -56,7 +54,7 @@ class AppLifecycleService with WidgetsBindingObserver {
 
   void _onAppResumed() {
     print('📱 App resumed - clearing notifications');
-    NotificationService().clearBadgeCount();
+    // NotificationService().clearBadgeCount();
 
     final currentRoute = Get.currentRoute;
     print('📍 Current route: $currentRoute');

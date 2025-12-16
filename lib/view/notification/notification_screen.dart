@@ -9,13 +9,28 @@ import '../../models/Notification/notification_module.dart';
 import '../../view_models/controller/notification/notification_controller.dart';
 import 'package:intl/intl.dart';
 
-class NotificationScreen extends StatelessWidget {
-  NotificationScreen({super.key});
+class NotificationScreen extends StatefulWidget {
+  const NotificationScreen({super.key});
 
+  @override
+  State<NotificationScreen> createState() => _NotificationScreenState();
+}
+
+class _NotificationScreenState extends State<NotificationScreen> {
   final NotificationController controller = Get.find<NotificationController>();
+
   final TextEditingController searchController = TextEditingController();
+
   final RxString selectedFilter = 'all'.obs;
+
   final FocusNode _searchFocusNode = FocusNode();
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await controller.refreshNotifications();
+    });
+  }
 
   List<Notifications> _filterNotifications(List<Notifications>? notifications) {
     if (notifications == null) return [];

@@ -49,10 +49,7 @@ Future<void> main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await NotificationService().initialize();
   await GetStorage.init();
-
-  // ⭐ HANDLE REFERRAL BEFORE ANYTHING ELSE
   await _initReferralDeepLinks();
-
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   Stripe.publishableKey = Myconst.publicKey;
@@ -191,6 +188,13 @@ class _MyAppState extends State<MyApp> {
         final content =
             data['message'] ?? data['text'] ?? data['content'] ?? "";
 
+        final type = message.data['type'];
+
+        // Only show local notification for chat
+        if (type == 'chat') {
+          NotificationService().showNotification(message);
+        }
+
         if (isGroup) {
           Get.find<GroupUnreadCountController>().incrementGroupUnread(
             incomingChatId,
@@ -210,7 +214,7 @@ class _MyAppState extends State<MyApp> {
         }
       }
 
-      NotificationService().showNotification(message);
+      // NotificationService().showNotification(message);
     });
 
     FirebaseMessaging.onMessageOpenedApp.listen((message) {

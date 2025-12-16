@@ -68,34 +68,6 @@ class NotificationController extends GetxController {
   }
 
   Future<void> _showNotification(Notifications notification) async {
-    // Show SnackBar
-    Get.snackbar(
-      notification.title ?? 'New Notification',
-      notification.message ?? 'No details',
-      titleText: Text(
-        notification.title ?? 'New Notification',
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: 16,
-        ),
-      ),
-      messageText: Text(
-        notification.message ?? 'No details',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 14,
-        ),
-      ),
-      backgroundColor: Colors.blueAccent,
-      colorText: Colors.white,
-      snackPosition: SnackPosition.TOP,
-      duration: Duration(seconds: 3),
-      margin: EdgeInsets.all(10),
-      borderRadius: 8,
-    );
-
-    // Show local notification
     try {
       const AndroidNotificationDetails androidDetails =
           AndroidNotificationDetails(
