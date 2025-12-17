@@ -135,7 +135,7 @@ class SocketService {
 
       final String userId = user?.user.id ?? "";
 
-      log("Connecting to socket: $serverUrl with userId: $userId");
+      // log("Connecting to socket: $serverUrl with userId: $userId");
 
       _socket = IO.io(
         serverUrl,
