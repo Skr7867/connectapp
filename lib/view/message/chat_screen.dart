@@ -5712,28 +5712,28 @@ class _ChatScreenState extends State<ChatScreen>
                       ...entry.value.map((reaction) {
                         final isCurrentUser = reaction.user.id == currentUserId;
                         return ListTile(
-                          leading: CircleAvatar(
-                            radius: 20,
-                            backgroundColor: Colors.grey,
-                            backgroundImage: reaction.user.avatar != null &&
-                                    reaction.user.avatar!.isNotEmpty
-                                ? CacheImageLoader(
-                                    reaction.user.avatar!,
-                                    ImageAssets.defaultProfileImg,
-                                  )
-                                : null,
-                            child: reaction.user.avatar == null ||
-                                    reaction.user.avatar!.isEmpty
-                                ? Text(
-                                    _getInitials(reaction.user.name),
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : null,
-                          ),
+                          // leading: CircleAvatar(
+                          //   radius: 20,
+                          //   backgroundColor: Colors.grey,
+                          //   backgroundImage: reaction.user.avatar != null &&
+                          //           reaction.user.avatar!.isNotEmpty
+                          //       ? CacheImageLoader(
+                          //           reaction.user.avatar!,
+                          //           ImageAssets.defaultProfileImg,
+                          //         )
+                          //       : null,
+                          //   child: reaction.user.avatar == null ||
+                          //           reaction.user.avatar!.isEmpty
+                          //       ? Text(
+                          //           _getInitials(reaction.user.name),
+                          //           style: const TextStyle(
+                          //             fontSize: 12,
+                          //             fontWeight: FontWeight.bold,
+                          //             color: Colors.white,
+                          //           ),
+                          //         )
+                          //       : null,
+                          // ),
                           title: Row(
                             children: [
                               Text(
@@ -5812,6 +5812,7 @@ class _ChatScreenState extends State<ChatScreen>
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
+                    fontFamily: AppFonts.opensansRegular,
                     color: Theme.of(context).textTheme.bodyLarge?.color,
                   ),
                 ),
@@ -5835,27 +5836,27 @@ class _ChatScreenState extends State<ChatScreen>
                   final isCurrentUser = user.id == currentUserId;
 
                   return ListTile(
-                    leading: CircleAvatar(
-                      radius: 20,
-                      backgroundColor: Colors.transparent,
-                      backgroundImage:
-                          user.avatar != null && user.avatar!.isNotEmpty
-                              ? CacheImageLoader(
-                                  user.avatar!,
-                                  ImageAssets.defaultProfileImg,
-                                )
-                              : null,
-                      child: user.avatar == null || user.avatar!.isEmpty
-                          ? Text(
-                              _getInitials(user.name),
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            )
-                          : null,
-                    ),
+                    // leading: CircleAvatar(
+                    //   radius: 20,
+                    //   backgroundColor: AppColors.greyColor,
+                    //   backgroundImage:
+                    //       user.avatar != null && user.avatar!.isNotEmpty
+                    //           ? CacheImageLoader(
+                    //               user.avatar!,
+                    //               ImageAssets.defaultProfileImg,
+                    //             )
+                    //           : null,
+                    //   child: user.avatar == null || user.avatar!.isEmpty
+                    //       ? Text(
+                    //           _getInitials(user.name),
+                    //           style: const TextStyle(
+                    //             fontSize: 12,
+                    //             fontWeight: FontWeight.bold,
+                    //             color: Colors.white,
+                    //           ),
+                    //         )
+                    //       : null,
+                    // ),
                     title: Row(
                       children: [
                         Text(

@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:video_player/video_player.dart';
 import '../../../data/response/status.dart';
+import '../../../res/color/app_colors.dart';
 import '../../../res/fonts/app_fonts.dart';
 import '../../../res/routes/routes_name.dart';
 import '../../../view_models/controller/follow/user_follow_controller.dart';
@@ -364,44 +365,66 @@ class ClipPlayScreen extends StatelessWidget {
     FollowUnfollowController followController,
     Size size,
   ) {
+    final clipController = Get.find<GetClipByIdController>();
+    final userId = clip.userId!.sId!;
+
     return Obx(() {
-      final userId = clip.userId!.sId.toString();
-      final following = followController.isFollowing(userId);
+      final clipData = clipController.clipData.value;
+
+      // fallback safety
+      final isFollowingFromApi = clipData?.isFollowing ?? false;
+
+      // controller state (after taps)
+      final isFollowingFromController = followController.isFollowing(userId);
+
+      // final decision
+      final isFollowing = followController.followedUserIds.isEmpty
+          ? isFollowingFromApi
+          : isFollowingFromController;
 
       return GestureDetector(
-        onTap: () {
-          if (following) {
-            followController.unfollowUser(userId);
+        onTap: () async {
+          if (isFollowing) {
+            final success = await followController.unfollowUser(userId);
+            if (success && clipData != null) {
+              clipData.isFollowing = false;
+              clipController.clipData.refresh();
+            }
           } else {
-            followController.followUser(userId);
+            final success = await followController.followUser(userId);
+            if (success && clipData != null) {
+              clipData.isFollowing = true;
+              clipController.clipData.refresh();
+            }
           }
         },
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
+          duration: const Duration(milliseconds: 200),
           padding: EdgeInsets.symmetric(
             horizontal: size.width * 0.03,
             vertical: size.height * 0.006,
           ),
           decoration: BoxDecoration(
-            gradient: following
+            gradient: isFollowing
                 ? null
                 : const LinearGradient(
                     colors: [Colors.pinkAccent, Colors.purpleAccent],
                   ),
-            color: following ? Colors.grey.shade700 : null,
+
+            // color: isFollowing ? Colors.grey.shade700 : null,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: following ? Colors.grey.shade600 : Colors.transparent,
+              color: isFollowing ? AppColors.blackColor : Colors.transparent,
               width: 1,
             ),
           ),
           child: Text(
-            following ? "Following" : "Follow",
+            isFollowing ? "Following" : "Follow",
             style: TextStyle(
-              color: Colors.white,
-              fontSize: size.width * 0.03,
-              fontWeight: FontWeight.w600,
-            ),
+                color: Colors.white,
+                fontSize: size.width * 0.03,
+                fontWeight: FontWeight.bold,
+                fontFamily: AppFonts.opensansRegular),
           ),
         ),
       );

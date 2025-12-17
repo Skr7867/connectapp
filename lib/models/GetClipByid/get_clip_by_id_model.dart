@@ -38,6 +38,7 @@ class Clip {
   int? commentCount;
   int? viewCount;
   bool? isLiked;
+  bool? isFollowing;
   int? totalClipsByUser;
   bool? isReposted;
   List<RepostedByFollowings>? repostedByFollowings;
@@ -63,6 +64,7 @@ class Clip {
     commentCount = json['commentCount'];
     viewCount = json['viewCount'];
     isLiked = json['isLiked'];
+    isFollowing = json['isFollowing'];
     totalClipsByUser = json['totalClipsByUser'];
     isReposted = json['isReposted'];
 
@@ -99,6 +101,7 @@ class Clip {
     data['commentCount'] = commentCount;
     data['viewCount'] = viewCount;
     data['isLiked'] = isLiked;
+    data['isFollowing'] = isFollowing;
     data['totalClipsByUser'] = totalClipsByUser;
     data['isReposted'] = isReposted;
 
