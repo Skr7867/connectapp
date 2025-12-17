@@ -34,7 +34,7 @@ class UnreadCountController extends GetxController {
     if (token == null) return;
 
     unreadCountList.value = await _repository.fetchUnreadCount(token);
-    log("📊 Loaded ${unreadCountList.length} unread counts");
+    // log("📊 Loaded ${unreadCountList.length} unread counts");
   }
 
   void incrementUnreadWithLastMessage(String chatId,
@@ -63,17 +63,17 @@ class UnreadCountController extends GetxController {
     unreadCountList.refresh();
   }
 
-  // ---- SOCKET UPDATE FROM SERVER ----
+  // SOCKET UPDATE FROM SERVER
   void updateUnreadFromSocket(Map<String, dynamic> data) {
     final chatId = data["chatId"] ?? data["groupId"];
     if (chatId == null) return;
 
-    // ✅ Skip group messages
+    // Skip group messages
     final isGroup = data["isGroup"] == true ||
         data["groupId"] != null ||
         data["group"] != null;
     if (isGroup) {
-      log("📦 Skipping group message in UnreadCountController");
+      log("Skipping group message in UnreadCountController");
       return;
     }
 
@@ -92,16 +92,16 @@ class UnreadCountController extends GetxController {
     final chatId = data["chat"] ?? data["chatId"];
     if (chatId == null) return;
 
-    // ✅ Skip group messages
+    //  Skip group messages
     final isGroup = data["group"] != null || data["groupId"] != null;
     if (isGroup) {
-      log("📦 Skipping group message in UnreadCountController");
+      log(" Skipping group message in UnreadCountController");
       return;
     }
 
     // If user is currently inside chat → no unread
     if (currentOpenChatId == chatId) {
-      log("📥 Message received but chat $chatId is open → ignore unread");
+      log(" Message received but chat $chatId is open → ignore unread");
       return;
     }
 
@@ -114,7 +114,7 @@ class UnreadCountController extends GetxController {
       return;
     }
 
-    log("🔔 New message for chat $chatId - incrementing unread");
+    log(" New message for chat $chatId - incrementing unread");
     incrementUnread(chatId);
   }
 
@@ -123,12 +123,12 @@ class UnreadCountController extends GetxController {
     final chatId = data["chatId"];
     if (chatId == null) return;
 
-    // ✅ Skip group messages
+    //  Skip group messages
     final isGroup = data["isGroup"] == true || data["groupId"] != null;
     if (isGroup) return;
 
     clearUnreadForChat(chatId);
-    log("🧹 Socket cleared unread for $chatId (messages read)");
+    log("Socket cleared unread for $chatId (messages read)");
   }
 
   // ---- INTERNAL APPLY ----
@@ -138,10 +138,8 @@ class UnreadCountController extends GetxController {
     if (index != -1) {
       unreadCountList[index] =
           unreadCountList[index].copyWith(unreadCount: count);
-      log("📊 Applied unread count for $chatId: $count");
     } else {
       unreadCountList.add(UnreadCountModel(sId: chatId, unreadCount: count));
-      log("📊 Added new chat $chatId with unread: $count");
     }
 
     unreadCountList.refresh();
@@ -156,10 +154,8 @@ class UnreadCountController extends GetxController {
       final newCount = currentCount + 1;
       unreadCountList[index] =
           unreadCountList[index].copyWith(unreadCount: newCount);
-      log("🔔 PRIVATE: Incremented $chatId: $currentCount -> $newCount");
     } else {
       unreadCountList.add(UnreadCountModel(sId: chatId, unreadCount: 1));
-      log("🔔 PRIVATE: New chat $chatId: 0 -> 1");
     }
 
     unreadCountList.refresh();
@@ -173,12 +169,10 @@ class UnreadCountController extends GetxController {
     if (index != -1) {
       unreadCountList[index] = unreadCountList[index].copyWith(unreadCount: 0);
       unreadCountList.refresh();
-      log("✅ Cleared unread for $chatId");
     }
   }
 
   void closedChat() {
     currentOpenChatId = null;
-    log("👋 Closed current chat");
   }
 }

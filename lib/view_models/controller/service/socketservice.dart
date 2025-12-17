@@ -100,7 +100,6 @@ class SocketService {
   Future<void> clearUnreadCount(String chatId) async {
     await _initPrefs();
     await _prefs?.remove('unread_$chatId');
-    log('🗑️ Cleared unread count for $chatId');
   }
 
   // Get all unread counts
@@ -119,14 +118,7 @@ class SocketService {
       }
     }
 
-    log('📊 Retrieved all unread counts: $unreadCounts');
     return unreadCounts;
-  }
-
-  // Save last message timestamp for sorting
-  Future<void> _saveLastMessageTime(String chatId, int timestamp) async {
-    await _initPrefs();
-    await _prefs?.setInt('lastmsg_$chatId', timestamp);
   }
 
   //  Get last message timestamp
@@ -358,7 +350,6 @@ class SocketService {
 
     _socket?.emit('markAsRead', readData);
     await clearUnreadCount(chatId);
-    log('✅ Marking messages as read and clearing local count: $chatId');
   }
 
   // ✅ ENHANCED: Chat opened with unread count update
@@ -375,7 +366,6 @@ class SocketService {
 
     // Clear local unread count when chat is opened
     await clearUnreadCount(chatId);
-    log('✅ Chat opened and unread count cleared: $chatId');
   }
 
   //**********************************existing methods remain same******************** */

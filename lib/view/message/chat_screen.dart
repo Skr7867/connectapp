@@ -70,7 +70,7 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen>
     with SingleTickerProviderStateMixin {
-  final Map<String, String> _translatedMessages = {}; // Store translations
+  final Map<String, String> _translatedMessages = {};
   final Set<String> _translatingMessages = {};
   bool _autoTranslate = false;
   String? _translationError;
@@ -1518,6 +1518,7 @@ class _ChatScreenState extends State<ChatScreen>
       context: context,
       builder: (BuildContext context) {
         return Dialog(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
@@ -1531,21 +1532,26 @@ class _ChatScreenState extends State<ChatScreen>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       'Starred Messages',
                       style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).textTheme.bodyLarge?.color,
+                          fontFamily: AppFonts.opensansRegular),
                     ),
                     IconButton(
                       onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.close),
+                      icon: Icon(
+                        Icons.close,
+                        color: Theme.of(context).textTheme.bodyLarge?.color,
+                      ),
                     ),
                   ],
                 ),
-                const Divider(),
-
+                Divider(
+                  color: AppColors.greyColor.withOpacity(0.4),
+                ),
                 // Content
                 Expanded(
                   child: FutureBuilder<List<dynamic>>(
@@ -1623,8 +1629,13 @@ class _ChatScreenState extends State<ChatScreen>
                               message['createdAt']?.toString() ?? '';
                           final messageId = message['_id']?.toString() ?? '';
 
-                          return Card(
+                          return Container(
                             margin: const EdgeInsets.only(bottom: 8),
+                            decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: AppColors.greyColor.withOpacity(0.4),
+                                ),
+                                borderRadius: BorderRadius.circular(10)),
                             child: Padding(
                               padding: const EdgeInsets.all(12),
                               child: Column(
@@ -1638,10 +1649,15 @@ class _ChatScreenState extends State<ChatScreen>
                                       Expanded(
                                         child: Text(
                                           senderName,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16,
-                                          ),
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                              fontFamily:
+                                                  AppFonts.opensansRegular,
+                                              color: Theme.of(context)
+                                                  .textTheme
+                                                  .bodyLarge
+                                                  ?.color),
                                         ),
                                       ),
                                       Text(
@@ -1649,6 +1665,7 @@ class _ChatScreenState extends State<ChatScreen>
                                         style: const TextStyle(
                                           color: Colors.grey,
                                           fontSize: 12,
+                                          fontFamily: AppFonts.opensansRegular,
                                         ),
                                       ),
                                     ],
@@ -1658,7 +1675,10 @@ class _ChatScreenState extends State<ChatScreen>
                                   // Message content
                                   Text(
                                     content,
-                                    style: const TextStyle(fontSize: 14),
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        fontFamily: AppFonts.opensansRegular,
+                                        color: AppColors.greyColor),
                                   ),
                                   const SizedBox(height: 8),
 
@@ -5865,6 +5885,7 @@ class _ChatScreenState extends State<ChatScreen>
                             fontWeight: isCurrentUser
                                 ? FontWeight.bold
                                 : FontWeight.normal,
+                            fontFamily: AppFonts.opensansRegular,
                             color: Theme.of(context).textTheme.bodyLarge?.color,
                           ),
                         ),
