@@ -47,6 +47,7 @@ import '../../view_models/controller/service/socketservice.dart';
 import '../../view_models/controller/unreadCount/unread_count_controller.dart';
 import 'chat_open_tracker.dart';
 import 'chat_profile.dart';
+import 'chat_scroll_physics.dart';
 import 'notificationservice.dart';
 
 extension IterableExtension<T> on Iterable<T> {
@@ -767,8 +768,9 @@ class _ChatScreenState extends State<ChatScreen>
   void _initScrollListener() {
     _scrollController.addListener(() {
       final position = _scrollController.position;
-      final isAtBottom =
-          position.pixels >= position.maxScrollExtent - _bottomThreshold;
+
+      // Check if user is at bottom (within 50 pixels)
+      final isAtBottom = position.pixels >= position.maxScrollExtent - 50.0;
 
       // Update user position state
       if (isAtBottom != _isUserAtBottom) {
@@ -778,13 +780,21 @@ class _ChatScreenState extends State<ChatScreen>
       }
 
       // Show/hide scroll to bottom button
-      final shouldShowButton = !isAtBottom &&
-          position.pixels < position.maxScrollExtent - _scrollThreshold;
+      final shouldShowButton =
+          !isAtBottom && position.pixels < position.maxScrollExtent - 100.0;
 
       if (shouldShowButton != _showScrollToBottom) {
         setState(() {
           _showScrollToBottom = shouldShowButton;
         });
+      }
+
+      // Load older messages when near top
+      if (position.pixels <= 100.0 &&
+          !_isLoadingOlderMessages &&
+          selectedChatId != null &&
+          (_hasMoreMessages[selectedChatId] ?? true)) {
+        _loadOlderMessages();
       }
     });
   }
@@ -4077,7 +4087,7 @@ class _ChatScreenState extends State<ChatScreen>
                                 );
                               },
                             ),
-                            // Optional: Add a small overlay with file size
+                            //  Add a small overlay with file size
                             Positioned(
                               bottom: 8,
                               right: 8,
@@ -4358,7 +4368,11 @@ class _ChatScreenState extends State<ChatScreen>
     super.initState();
     Get.put(UnreadCountController());
     Get.put(GroupUnreadCountController());
-    _scrollController.addListener(_onScroll);
+    _scrollController.addListener(() {
+      _onScroll();
+      _initScrollListener();
+    });
+
     _initScrollListener();
     _animationController = AnimationController(
       vsync: this,
@@ -5368,45 +5382,73 @@ class _ChatScreenState extends State<ChatScreen>
     log('🔄 Updating reactions for message: $messageIdToUpdate');
     log('🔄 Updated message data: $updatedMessage');
 
+    // ✅ FIXED: Update the message in ALL chats where it exists
     setState(() {
-      List<Message> currentChatMessages = messages[selectedChatId!] ?? [];
+      bool foundAndUpdated = false;
 
-      for (int i = 0; i < currentChatMessages.length; i++) {
-        if (currentChatMessages[i].id == messageIdToUpdate) {
-          // Properly parse reactions with the updated method
-          final reactionsData = updatedMessage['reactions'] as List?;
-          if (reactionsData != null) {
-            log('📊 Processing ${reactionsData.length} reactions');
+      // Update in all chats (not just selectedChatId)
+      messages.forEach((chatId, messageList) {
+        for (int i = 0; i < messageList.length; i++) {
+          if (messageList[i].id == messageIdToUpdate) {
+            log('✅ Found message in chat: $chatId');
 
-            currentChatMessages[i].reactions =
-                reactionsData.map((reactionData) {
-              log('👤 Reaction data: $reactionData');
+            // Get reactions data
+            final reactionsData = updatedMessage['reactions'] as List?;
+            List<Reaction>? newReactions = [];
 
-              try {
-                final reaction = Reaction.fromJson(reactionData);
-                log('✅ Parsed reaction: emoji=${reaction.emoji}, user=${reaction.user.name}');
-                return reaction;
-              } catch (e) {
-                log('❌ Error parsing reaction: $e');
-                // Return a fallback reaction
-                return Reaction(
-                  user: Sender(
-                    id: reactionData['user']?['_id'] ?? '',
-                    name: reactionData['user']?['fullName'] ?? 'Unknown User',
-                    avatar: null,
-                  ),
-                  emoji: reactionData['emoji'] ?? '❓',
-                );
+            if (reactionsData != null && reactionsData.isNotEmpty) {
+              log('📊 Processing ${reactionsData.length} reactions');
+
+              newReactions = reactionsData.map((reactionData) {
+                try {
+                  final reaction = Reaction.fromJson(reactionData);
+                  log('✅ Parsed reaction: emoji=${reaction.emoji}, user=${reaction.user.name}');
+                  return reaction;
+                } catch (e) {
+                  log('❌ Error parsing reaction: $e');
+                  // Create fallback reaction
+                  return Reaction(
+                    user: Sender(
+                      id: reactionData['user']?['_id'] ??
+                          reactionData['user']?['id'] ??
+                          '',
+                      name: reactionData['user']?['fullName'] ??
+                          reactionData['user']?['name'] ??
+                          'Unknown User',
+                      avatar: null,
+                    ),
+                    emoji: reactionData['emoji'] ?? '❓',
+                  );
+                }
+              }).toList();
+            }
+
+            // Update the message with new reactions
+            // messageList[i] = messageList[i].copyWith(
+            //   reactions: newReactions,
+            // );
+
+            foundAndUpdated = true;
+            log('✅ Updated ${newReactions.length} reactions for message in chat: $chatId');
+
+            // Also update in pinned messages if it's pinned
+            if (pinnedMessagesByChat.containsKey(chatId)) {
+              final pinnedList = pinnedMessagesByChat[chatId]!;
+              for (int j = 0; j < pinnedList.length; j++) {
+                final pinnedMsgId = _getMessageId(pinnedList[j]);
+                if (pinnedMsgId == messageIdToUpdate) {
+                  // Update the pinned message too
+                  pinnedList[j] = messageList[i];
+                  log('✅ Also updated pinned message');
+                }
               }
-            }).toList();
-
-            log(' Updated ${currentChatMessages[i].reactions?.length ?? 0} reactions for message');
-          } else {
-            currentChatMessages[i].reactions = [];
-            log(' No reactions found, setting empty list');
+            }
           }
-          break;
         }
+      });
+
+      if (!foundAndUpdated) {
+        log('⚠️ Message not found in any chat list: $messageIdToUpdate');
       }
     });
   }
@@ -5414,6 +5456,60 @@ class _ChatScreenState extends State<ChatScreen>
   void _handleReaction(String messageId, String emoji) {
     if (selectedChatId == null || currentUserId == null) return;
 
+    // ✅ OPTIMISTIC UPDATE: Add the reaction immediately
+    final tempReactionId = 'temp-${DateTime.now().millisecondsSinceEpoch}';
+
+    setState(() {
+      // Update in all chats where the message exists
+      messages.forEach((chatId, messageList) {
+        for (int i = 0; i < messageList.length; i++) {
+          if (messageList[i].id == messageId) {
+            // Create temporary optimistic reaction
+            final tempReaction = Reaction(
+              user: Sender(
+                id: currentUserId!,
+                name: currentUserName ?? 'You',
+                avatar: currentUserAvatar,
+              ),
+              emoji: emoji,
+            );
+
+            // Get existing reactions or create new list
+            final currentReactions = messageList[i].reactions ?? [];
+
+            // Check if user already reacted with this emoji
+            final existingIndex = currentReactions.indexWhere(
+                (r) => r.user.id == currentUserId && r.emoji == emoji);
+
+            if (existingIndex >= 0) {
+              // Remove existing reaction (toggle off)
+              currentReactions.removeAt(existingIndex);
+            } else {
+              // Add new reaction
+              currentReactions.add(tempReaction);
+            }
+
+            // Update message with new reactions list
+            // messageList[i] = messageList[i].copyWith(
+            //   reactions: List<Reaction>.from(currentReactions),
+            // );
+
+            // Also update in pinned messages
+            if (pinnedMessagesByChat.containsKey(chatId)) {
+              final pinnedList = pinnedMessagesByChat[chatId]!;
+              for (int j = 0; j < pinnedList.length; j++) {
+                final pinnedMsgId = _getMessageId(pinnedList[j]);
+                if (pinnedMsgId == messageId) {
+                  pinnedList[j] = messageList[i];
+                }
+              }
+            }
+          }
+        }
+      });
+    });
+
+    // Send reaction to server
     _socketService.reactToMessage(
       messageId: messageId,
       userId: currentUserId!,
@@ -5529,7 +5625,7 @@ class _ChatScreenState extends State<ChatScreen>
   Widget _buildReactionRow(List<Reaction> reactions) {
     if (reactions.isEmpty) return const SizedBox.shrink();
 
-    // Group reactions by emoji with proper user information
+    // Group reactions by emoji
     Map<String, List<Reaction>> groupedReactions = {};
     for (var reaction in reactions) {
       if (groupedReactions.containsKey(reaction.emoji)) {
@@ -5539,15 +5635,7 @@ class _ChatScreenState extends State<ChatScreen>
       }
     }
 
-    // Sort by count (highest first) and take only top 3
-    final sortedEntries = groupedReactions.entries.toList()
-      ..sort((a, b) => b.value.length.compareTo(a.value.length));
-
-    final displayEmojis = sortedEntries.take(3).toList();
-    final remainingCount =
-        sortedEntries.length > 3 ? sortedEntries.length - 3 : 0;
-
-    // Check if current user has reacted with any emoji
+    // Check if current user has reacted
     bool hasCurrentUserReacted =
         reactions.any((r) => r.user.id == currentUserId);
 
@@ -5558,51 +5646,59 @@ class _ChatScreenState extends State<ChatScreen>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
         decoration: BoxDecoration(
-          // color: hasCurrentUserReacted
-          //     ? Colors.blue.withOpacity(0.1)
-          //     : Colors.grey[200],
+          color: hasCurrentUserReacted
+              ? Colors.blue.withOpacity(0.1)
+              : Colors.grey[100],
           borderRadius: BorderRadius.circular(12),
           border: hasCurrentUserReacted
-              ? Border.all(color: AppColors.greyColor.withOpacity(0.3))
+              ? Border.all(color: Colors.blue.withOpacity(0.3))
               : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Display top 3 emojis in a row
-            ...displayEmojis.asMap().entries.map((entry) {
-              int index = entry.key;
-              var emojiEntry = entry.value;
-              String emoji = emojiEntry.key;
-              List<Reaction> emojiReactions = emojiEntry.value;
+            // Display top 3 emojis with counts
+            ...groupedReactions.entries.take(3).map((entry) {
+              final emoji = entry.key;
+              final count = entry.value.length;
+              final hasMyReaction =
+                  entry.value.any((r) => r.user.id == currentUserId);
 
-              return Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (index > 0) const SizedBox(width: 1),
-                  Text(emoji, style: const TextStyle(fontSize: 14)),
-                ],
+              return Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      emoji,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: hasMyReaction ? Colors.blue[700] : null,
+                      ),
+                    ),
+                    if (count > 1) ...[
+                      const SizedBox(width: 2),
+                      Text(
+                        count.toString(),
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: hasMyReaction
+                              ? Colors.blue[700]
+                              : Colors.grey[700],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               );
             }).toList(),
 
-            const SizedBox(width: 4),
-
-            // Total count
-            Text(
-              reactions.length.toString(),
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color:
-                    hasCurrentUserReacted ? Colors.blue[700] : Colors.grey[700],
-              ),
-            ),
-
-            // Show "+X" if there are more than 3 emoji types
-            if (remainingCount > 0) ...[
-              const SizedBox(width: 2),
+            // Show "+X more" if there are more than 3 types
+            if (groupedReactions.length > 3) ...[
+              const SizedBox(width: 4),
               Text(
-                '+$remainingCount',
+                '+${groupedReactions.length - 3}',
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
@@ -5991,58 +6087,39 @@ class _ChatScreenState extends State<ChatScreen>
 
     final newMessage = Message.fromJson(serverMessage);
 
-    // ✅ FIX: Check if this chat is currently open
+    // ✅ Check if this chat is currently open
     final isCurrentChat = ChatOpenTracker.currentChatId == chatId;
-
-    // ✅ FIX: Only set lastReadMessageId if chat is NOT currently open
-    if (!isCurrentChat && lastReadMessageId[chatId] == null) {
-      final existingMessages = messages[chatId] ?? [];
-      if (existingMessages.isNotEmpty) {
-        lastReadMessageId[chatId] = existingMessages.last.id;
-      }
-    }
 
     setState(() {
       if (messages[chatId] == null) {
         messages[chatId] = [];
       }
+
+      // Add new message at the end
       messages[chatId] = [...messages[chatId]!, newMessage];
     });
 
     if (isCurrentChat) {
       _cleanupMessageKeys();
+
+      // ✅ Auto-scroll only if user is at bottom
       if (_isUserAtBottom) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          _scrollToBottom();
+          _scrollToBottom(isInitialLoad: false);
         });
 
         markChatAsRead(chatId, currentUserId!);
         NotificationService().clearChatNotifications(chatId);
         lastReadMessageId[chatId] = newMessage.id;
+      } else {
+        // User is not at bottom, show scroll indicator
+        setState(() {
+          _showScrollToBottom = true;
+        });
       }
     }
 
-    // Update chat's last message and timestamp
-    // _updateChatLastMessage(chatId, newMessage);
-
-    // Force chat list to resort
-    setState(() {
-      if (!isGroupMessage) {
-        final chatIndex = directChats.indexWhere((chat) => chat.id == chatId);
-        if (chatIndex != -1) {
-          directChats[chatIndex] = Chat(
-            id: directChats[chatIndex].id,
-            name: directChats[chatIndex].name,
-            avatar: directChats[chatIndex].avatar,
-            lastMessage: newMessage.content,
-            timestamp: newMessage.timestamp,
-            isGroup: directChats[chatIndex].isGroup,
-            participants: directChats[chatIndex].participants,
-          );
-        }
-      }
-    });
-
+    // Update chat list ordering
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _sortChatsSafely();
     });
@@ -6452,9 +6529,6 @@ class _ChatScreenState extends State<ChatScreen>
     return group?.admins!.contains(currentUserId) ?? false;
   }
 
-  // In chat_screen.dart
-
-// ✅ UPDATE _selectChat method
   void _selectChat(String chatId) async {
     final unreadController = Get.find<UnreadCountController>();
     final groupUnreadController = Get.find<GroupUnreadCountController>();
@@ -6490,9 +6564,11 @@ class _ChatScreenState extends State<ChatScreen>
 
     await _localFileManager.updateCurrentUserId(chatId);
 
-    // ✅ Check if messages already loaded
-    final alreadyLoaded = messages.containsKey(chatId);
+    // ✅ Store current scroll position before loading
+    double? previousScrollPosition = null;
+    bool wasAtBottom = _isUserAtBottom;
 
+    // ✅ Reset all loading states
     setState(() {
       selectedChatId = chatId;
       _showScrollToBottom = false;
@@ -6500,7 +6576,7 @@ class _ChatScreenState extends State<ChatScreen>
       _translatingMessages.clear();
       _translationError = null;
       showChatList = MediaQuery.of(context).size.width <= 600 ? false : true;
-      _isLoadingMessages = !alreadyLoaded;
+      _isLoadingMessages = true; // Show loading indicator
       _isLoadingOlderMessages = false;
       _hasShownUnreadSeparator = false;
     });
@@ -6513,45 +6589,147 @@ class _ChatScreenState extends State<ChatScreen>
         markChatAsRead(chatId, currentUserId!);
       }
 
-      if (!alreadyLoaded) {
-        setState(() => _isLoadingMessages = false);
+      // ✅ Load messages based on chat type
+      if (chat.isGroup) {
+        _socketService.loadOlderGroupMessages(
+          groupId: chatId,
+          onResponse: (data) {
+            if (mounted) {
+              _handleGroupMessagesLoaded(data, chatId, wasAtBottom);
+            }
+          },
+        );
+      } else {
+        final otherParticipant = chat.participants?.firstWhereOrNull(
+          (p) => p.id != currentUserId,
+        );
+
+        if (otherParticipant != null && currentUserId != null) {
+          _socketService.loadOlderPrivateMessages(
+            user1Id: currentUserId!,
+            user2Id: otherParticipant.id,
+            onResponse: (data) {
+              if (mounted) {
+                _handlePrivateMessagesLoaded(data, chatId, wasAtBottom);
+              }
+            },
+          );
+        } else {
+          setState(() => _isLoadingMessages = false);
+        }
       }
     } catch (e) {
       log("🚨 Error in _selectChat: $e");
       setState(() => _isLoadingMessages = false);
     }
+  }
 
-    if (currentUserId != null) {
-      if (chat.isGroup) {
-        _joinGroup(chatId, currentUserId!, chatId);
-      } else {
-        if (!alreadyLoaded) {
-          _joinPrivateChat(chatId);
-        }
+  void _handleGroupMessagesLoaded(
+      Map<String, dynamic> data, String groupId, bool wasAtBottom) {
+    if (data['status'] == 200 && data['messages'] != null) {
+      final messagesList = data['messages'] as List;
+
+      // Transform messages
+      final transformedMessages = messagesList.map((msg) {
+        final message = Message.fromJson(msg);
+        // log('📨 Group Message ${message.id} has ${message.reactions?.length ?? 0} reactions');
+        return message;
+      }).toList();
+
+      // Sort by timestamp (oldest to newest)
+      transformedMessages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+      if (mounted) {
+        setState(() {
+          messages[groupId] = transformedMessages;
+          selectedChatId = groupId;
+          _isLoadingMessages = false;
+        });
+
+        // ✅ Scroll to bottom AFTER messages are loaded
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _scrollToLatestMessage(wasAtBottom: wasAtBottom);
+          });
+        });
       }
+    } else {
+      setState(() => _isLoadingMessages = false);
+    }
+  }
+
+  void _scrollToLatestMessage({bool wasAtBottom = true}) {
+    if (!_scrollController.hasClients) {
+      // Schedule for next frame
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToLatestMessage(wasAtBottom: wasAtBottom);
+      });
+      return;
     }
 
-    // ✅ IMPROVED: Always scroll to bottom when selecting a chat
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _sortChatsSafely();
-      // Add multiple frame callbacks to ensure scroll happens
+    // Get current messages
+    final chatMessages = messages[selectedChatId] ?? [];
+
+    if (chatMessages.isEmpty) {
+      return;
+    }
+
+    // If user was at bottom or it's a new chat, scroll to bottom
+    if (wasAtBottom || _isUserAtBottom) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (_scrollController.hasClients) {
-            _scrollController.jumpTo(
-              _scrollController.position.maxScrollExtent,
-            );
-          }
-        });
+        if (_scrollController.hasClients) {
+          // Smooth scroll to bottom
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
       });
+    }
+
+    // Update user position
+    setState(() {
+      _isUserAtBottom = true;
     });
   }
 
-// ✅ Add method to handle back button from chat
-  void _closeChat() {
-    // Prevent multiple calls
-    if (selectedChatId == null) return;
+  void _handlePrivateMessagesLoaded(
+      Map<String, dynamic> data, String chatId, bool wasAtBottom) {
+    if (data['status'] == 200 && data['messages'] != null) {
+      final messagesList = data['messages'] as List;
 
+      // Transform messages
+      final transformedMessages = messagesList.map((msg) {
+        final message = Message.fromJson(msg);
+
+        return message;
+      }).toList();
+
+      // Sort by timestamp (oldest to newest)
+      transformedMessages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+      if (mounted) {
+        setState(() {
+          messages[chatId] = transformedMessages;
+          selectedChatId = chatId;
+          _isLoadingMessages = false;
+        });
+
+        // ✅ Scroll to bottom AFTER messages are loaded
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _scrollToLatestMessage(wasAtBottom: wasAtBottom);
+          });
+        });
+      }
+    } else {
+      setState(() => _isLoadingMessages = false);
+    }
+  }
+
+  void _closeChat() {
+    if (selectedChatId == null) return;
     final unreadController = Get.find<UnreadCountController>();
     final groupUnreadController = Get.find<GroupUnreadCountController>();
 
@@ -7798,30 +7976,39 @@ class _ChatScreenState extends State<ChatScreen>
 
   void _scrollToBottom({bool force = false, bool isInitialLoad = false}) {
     if (!_scrollController.hasClients) {
-      // Schedule scroll for next frame if controller not ready
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _scrollToBottom(force: force, isInitialLoad: isInitialLoad);
       });
       return;
     }
 
+    final maxScroll = _scrollController.position.maxScrollExtent;
+
+    // Use different approach for initial load
     if (isInitialLoad || force) {
-      // For initial load or forced scroll, use multiple frame callbacks
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (_scrollController.hasClients) {
-            _scrollController.jumpTo(
-              _scrollController.position.maxScrollExtent,
-            );
-          }
-        });
+        if (_scrollController.hasClients) {
+          // Jump to bottom for initial load
+          _scrollController.jumpTo(maxScroll);
+
+          // Then smooth scroll to ensure proper positioning
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (_scrollController.hasClients) {
+              _scrollController.animateTo(
+                maxScroll,
+                duration: const Duration(milliseconds: 100),
+                curve: Curves.easeOut,
+              );
+            }
+          });
+        }
       });
     } else {
-      // For regular scrolling
+      // Regular smooth scroll
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_scrollController.hasClients) {
           _scrollController.animateTo(
-            _scrollController.position.maxScrollExtent,
+            maxScroll,
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeOut,
           );
@@ -9258,10 +9445,13 @@ class _ChatScreenState extends State<ChatScreen>
                   else
                     ListView.builder(
                       controller: _scrollController,
+                      physics: const ChatScrollPhysics(), // Use custom physics
                       padding: const EdgeInsets.all(16),
+                      reverse:
+                          false, // Important: Keep as false for proper ordering
                       itemCount: displayMessages.length + 1,
                       itemBuilder: (context, index) {
-                        //  SHOW ENCRYPTION NOTICE as first item
+                        // SHOW ENCRYPTION NOTICE as first item
                         if (index == 0) {
                           return EncryptionNotice();
                         }

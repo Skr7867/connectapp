@@ -203,7 +203,6 @@ class SocketService {
         } catch (_) {
           _olderGroupMessagesController.add({'data': data});
         }
-        log('Received older group messages response: $data');
       });
 
       _socket?.on('receiveMessage', (data) async {
