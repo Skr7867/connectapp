@@ -181,6 +181,7 @@ class _AuthenticatorVerificationScreenState
                         prefixIcon: Icons.lock,
                         hintText: 'enter_6_digit'.tr,
                         maxLength: 6,
+                        textColor: Theme.of(context).textTheme.bodyLarge?.color,
                       ),
                       const SizedBox(height: 24),
                       SizedBox(

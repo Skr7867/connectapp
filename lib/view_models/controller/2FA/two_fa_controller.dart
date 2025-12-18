@@ -82,7 +82,7 @@ class TwoFAController extends GetxController {
           duration: const Duration(seconds: 5));
     } catch (e) {
       errorMessage.value = e.toString();
-      Get.snackbar('Error', 'Failed to send OTP: $e',
+      Get.snackbar('Failed', 'Failed to send OTP',
           snackPosition: SnackPosition.TOP,
           backgroundColor: Colors.red,
           duration: const Duration(seconds: 5));
@@ -132,14 +132,14 @@ class TwoFAController extends GetxController {
     } catch (e) {
       errorMessage.value = e.toString();
       // log('Verification error: $e');
-      String errorMsg = 'Verification failed: $e';
+      String errorMsg = 'Invalid or expired OTP';
       if (e.toString().contains('400')) {
         errorMsg = 'Invalid OTP code or token. Please check and try again.';
       } else if (e.toString().contains('TimeoutException')) {
         errorMsg =
             'Request timed out. Please check your network and try again.';
       }
-      Get.snackbar('Error', errorMsg,
+      Get.snackbar('Failed', errorMsg,
           snackPosition: SnackPosition.TOP,
           backgroundColor: Colors.red,
           duration: const Duration(seconds: 5),

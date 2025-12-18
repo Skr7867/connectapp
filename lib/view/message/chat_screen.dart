@@ -9246,10 +9246,6 @@ class _ChatScreenState extends State<ChatScreen>
                       onPressed: () {
                         _clearReplyState();
                         _closeChat();
-                        // setState(() {
-                        //   showChatList = true;
-                        //   selectedChatId = null;
-                        // });
                       },
                     ),
                   InkWell(
