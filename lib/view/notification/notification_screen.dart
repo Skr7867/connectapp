@@ -28,10 +28,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
   void initState() {
     super.initState();
 
-    // controller.fetchNotifications();
-    // WidgetsBinding.instance.addPostFrameCallback((_) async {
-    //   await controller.refreshNotifications();
-    // });
+    controller.fetchNotifications();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await controller.refreshNotifications();
+    });
   }
 
   List<Notifications> _filterNotifications(List<Notifications>? notifications) {

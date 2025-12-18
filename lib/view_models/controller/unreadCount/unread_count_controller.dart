@@ -29,6 +29,25 @@ class UnreadCountController extends GetxController {
     log("📡 UnreadCountController initialized");
   }
 
+  void updateLastMessageTime(String chatId, DateTime timestamp) {
+    final index = unreadCountList.indexWhere((u) => u.sId == chatId);
+    if (index != -1) {
+      final item = unreadCountList[index];
+      // Create updated item with new timestamp
+      final updated = UnreadCountModel(
+        sId: item.sId,
+        unreadCount: item.unreadCount,
+        lastMessage: LastMessage(
+          text: item.lastMessage?.text,
+          sentAt: timestamp.toIso8601String(),
+          // sender: item.lastMessage?.sentAt,
+        ),
+        participants: item.participants,
+      );
+      unreadCountList[index] = updated;
+    }
+  }
+
   Future<void> loadInitialUnreadCounts() async {
     final token = await _userPref.getToken();
     if (token == null) return;

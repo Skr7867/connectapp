@@ -27,6 +27,27 @@ class GroupUnreadCountController extends GetxController {
     _sortGroupsByLastMessage();
   }
 
+  void updateLastMessageTime(String groupId, DateTime timestamp) {
+    final index = unreadGroupList.indexWhere((g) => g.id == groupId);
+    if (index != -1) {
+      final item = unreadGroupList[index];
+      // Create updated item with new timestamp
+      final updated = GroupUnreadCountModel(
+        id: item.id,
+        name: item.name,
+        groupAvatar: item.groupAvatar,
+        unreadCount: item.unreadCount,
+        lastMessage: LastMessage(
+          text: item.lastMessage?.text,
+          sentAt: timestamp.toString(),
+          // sender: item.lastMessage?.timestamp,
+        ),
+        members: item.members,
+      );
+      unreadGroupList[index] = updated;
+    }
+  }
+
   void clearUnread(String groupId) {
     currentOpenGroupId = groupId;
 

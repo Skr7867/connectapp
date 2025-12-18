@@ -46,17 +46,32 @@ class GroupUnreadCountModel {
   }
 
   DateTime get effectiveTimestamp {
+    // First priority: Use lastMessage timestamp if available
     if (lastMessage?.timestamp != null) {
       return lastMessage!.timestamp!;
     }
+
+    // Second priority: Parse sentAt if timestamp is null
+    if (lastMessage?.sentAt != null) {
+      try {
+        return DateTime.parse(lastMessage!.sentAt!);
+      } catch (e) {
+        // Failed to parse sentAt, continue to next option
+      }
+    }
+
+    // Third priority: Use group creation date
     if (createdAt != null) {
       try {
         return DateTime.parse(createdAt!);
       } catch (e) {
-        return DateTime.now();
+        // Failed to parse createdAt
       }
     }
-    return DateTime.now();
+
+    // Last resort: Use a fixed old date instead of DateTime.now()
+    // This ensures groups without messages stay at the bottom
+    return DateTime(2000, 1, 1);
   }
 }
 

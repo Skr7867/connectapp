@@ -7678,6 +7678,160 @@ class _ChatScreenState extends State<ChatScreen>
     );
   }
 
+  // void _sendMessage() {
+  //   if (selectedChatId == null ||
+  //       _messageController.text.trim().isEmpty ||
+  //       currentUserId == null) {
+  //     return;
+  //   }
+
+  //   final tempMessageId = 'temp-${DateTime.now().millisecondsSinceEpoch}';
+  //   final chat = selectedChat;
+  //   final isGroup = chat?.isGroup ?? false;
+  //   String? receiverId;
+
+  //   _recentlySentMessages.add(tempMessageId);
+
+  //   Timer(const Duration(seconds: 3), () {
+  //     _recentlySentMessages.remove(tempMessageId);
+  //     setState(() {});
+  //   });
+
+  //   if (isGroup) {
+  //     receiverId = null;
+  //   } else {
+  //     if (pendingPrivateChatUserId != null) {
+  //       receiverId = pendingPrivateChatUserId;
+  //       otherId = receiverId ?? '';
+  //     } else {
+  //       final otherParticipant = chat?.participants?.firstWhere(
+  //         (p) => p.id != currentUserId,
+  //         orElse: () => null as Participant,
+  //       );
+  //       receiverId = otherParticipant?.id;
+  //       otherId = receiverId ?? '';
+  //     }
+  //   }
+
+  //   final messageContent = _messageController.text;
+  //   String formattedContent = _applyFormatting(messageContent);
+
+  //   // Extract mentions from the message
+  //   final mentions = isGroup ? _extractMentionsFromText(formattedContent) : [];
+
+  //   final replyToMessageId = replyingToMessage?.id;
+  //   final isReplying = showReplyPreview && replyingToMessage != null;
+
+  //   final newMessage = Message(
+  //     id: tempMessageId,
+  //     content: formattedContent,
+  //     timestamp: DateTime.now(),
+  //     sender: Sender(
+  //       id: currentUserId!,
+  //       name: currentUserName ?? 'Me',
+  //       avatar: currentUserAvatar,
+  //     ),
+  //     isRead: false,
+  //     replyTo: isReplying
+  //         ? ReplyTo(
+  //             id: replyingToMessage!.id,
+  //             content: replyingToMessage!.content,
+  //             sender: replyingToMessage!.sender,
+  //           )
+  //         : null,
+  //     // mentions: mentions, // Add this if your Message model supports it
+  //   );
+
+  //   setState(() {
+  //     messages[selectedChatId!] = [
+  //       ...(messages[selectedChatId!] ?? []),
+  //       newMessage
+  //     ];
+  //     _showScrollToBottom = false;
+  //     _mentionsInMessage.clear(); // Clear mentions list
+  //   });
+
+  //   _messageController.clear();
+  //   setState(() {
+  //     _isBold = false;
+  //     _isItalic = false;
+  //     _isUnderline = false;
+  //     _showMentionSheet = false; // Close mention sheet
+  //     _currentMentionQuery = '';
+  //     _filteredMentions = [];
+  //   });
+
+  //   _cancelReply();
+
+  //   WidgetsBinding.instance.addPostFrameCallback((_) {
+  //     _scrollToBottom();
+  //   });
+
+  //   log('📤 Sending message with temp ID: $tempMessageId');
+
+  //   _socketService.sendMessage(
+  //     senderId: currentUserId!,
+  //     receiverId: isGroup ? null : receiverId,
+  //     groupId: isGroup ? selectedChatId : null,
+  //     content: formattedContent,
+  //     replyToMessageId: isReplying ? replyToMessageId : null,
+  //     mentions: mentions.map((m) => m['userId'] as String).toList(),
+  //     callback: (response) {
+  //       _recentlySentMessages.remove(tempMessageId);
+
+  //       final success = response['success'] ?? false;
+  //       final messageId = response['messageId'];
+
+  //       if (success && messageId != null) {
+  //         final realMessageId = messageId.toString();
+
+  //         log('✅ Message sent successfully: $tempMessageId -> $realMessageId');
+
+  //         setState(() {
+  //           final chatMessages = messages[selectedChatId!] ?? [];
+  //           final tempIndex =
+  //               chatMessages.indexWhere((msg) => msg.id == tempMessageId);
+
+  //           if (tempIndex != -1) {
+  //             final updatedMessage = Message(
+  //               id: realMessageId,
+  //               content: chatMessages[tempIndex].content,
+  //               timestamp: chatMessages[tempIndex].timestamp,
+  //               sender: chatMessages[tempIndex].sender,
+  //               isRead: chatMessages[tempIndex].isRead,
+  //               messageType: chatMessages[tempIndex].messageType,
+  //               replyTo: chatMessages[tempIndex].replyTo,
+  //               reactions: chatMessages[tempIndex].reactions,
+  //             );
+
+  //             chatMessages[tempIndex] = updatedMessage;
+
+  //             if (_messageKeys.containsKey(tempMessageId)) {
+  //               final key = _messageKeys.remove(tempMessageId);
+  //               if (key != null) {
+  //                 _messageKeys[realMessageId] = key;
+  //               }
+  //             }
+
+  //             messages[selectedChatId!] = List<Message>.from(chatMessages);
+  //           }
+  //         });
+
+  //         log('✅ Message ID updated in UI: $tempMessageId -> $realMessageId');
+  //       } else {
+  //         log('❌ Message send failed: ${response['message']}');
+
+  //         setState(() {
+  //           final chatMessages = messages[selectedChatId!] ?? [];
+  //           messages[selectedChatId!] =
+  //               chatMessages.where((msg) => msg.id != tempMessageId).toList();
+  //         });
+  //         _showSnackBar(
+  //             'Failed to send message: ${response['message'] ?? 'Unknown error'}');
+  //       }
+  //     },
+  //   );
+  // }
   void _sendMessage() {
     if (selectedChatId == null ||
         _messageController.text.trim().isEmpty ||
@@ -7716,7 +7870,6 @@ class _ChatScreenState extends State<ChatScreen>
     final messageContent = _messageController.text;
     String formattedContent = _applyFormatting(messageContent);
 
-    // Extract mentions from the message
     final mentions = isGroup ? _extractMentionsFromText(formattedContent) : [];
 
     final replyToMessageId = replyingToMessage?.id;
@@ -7739,7 +7892,6 @@ class _ChatScreenState extends State<ChatScreen>
               sender: replyingToMessage!.sender,
             )
           : null,
-      // mentions: mentions, // Add this if your Message model supports it
     );
 
     setState(() {
@@ -7748,15 +7900,19 @@ class _ChatScreenState extends State<ChatScreen>
         newMessage
       ];
       _showScrollToBottom = false;
-      _mentionsInMessage.clear(); // Clear mentions list
+      _mentionsInMessage.clear();
     });
+
+    // ✅ ADD THIS: Update the chat list immediately after sending
+    _updateChatListAfterSending(
+        selectedChatId!, formattedContent, newMessage.timestamp);
 
     _messageController.clear();
     setState(() {
       _isBold = false;
       _isItalic = false;
       _isUnderline = false;
-      _showMentionSheet = false; // Close mention sheet
+      _showMentionSheet = false;
       _currentMentionQuery = '';
       _filteredMentions = [];
     });
@@ -7831,6 +7987,63 @@ class _ChatScreenState extends State<ChatScreen>
         }
       },
     );
+  }
+
+  void _updateChatListAfterSending(
+      String chatId, String lastMessage, DateTime timestamp) {
+    setState(() {
+      final unreadController = Get.find<UnreadCountController>();
+      final groupUnreadController = Get.find<GroupUnreadCountController>();
+
+      // Find the chat that was just messaged
+      final chatIndex = allChats.indexWhere((c) => c.id == chatId);
+
+      if (chatIndex != -1) {
+        final chat = allChats[chatIndex];
+
+        // Create updated chat with new last message and timestamp
+        final updatedChat = Chat(
+          id: chat.id,
+          name: chat.name,
+          avatar: chat.avatar,
+          lastMessage: lastMessage,
+          timestamp: timestamp, // ✅ Use the message timestamp
+          isGroup: chat.isGroup,
+          isOnline: chat.isOnline,
+          senderName: currentUserName ?? 'You',
+          participants: chat.participants,
+          pinnedMessages: chat.pinnedMessages,
+        );
+
+        // Update the chat in the list
+        allChats[chatIndex] = updatedChat;
+
+        // Move the chat to the top
+        allChats.removeAt(chatIndex);
+        allChats.insert(0, updatedChat);
+
+        // Update group/direct chat lists as well
+        if (chat.isGroup) {
+          final groupIndex = groups.indexWhere((g) => g.id == chatId);
+          if (groupIndex != -1) {
+            // Update group timestamp in controller
+            groupUnreadController.updateLastMessageTime(chatId, timestamp);
+          }
+        } else {
+          final directIndex = directChats.indexWhere((d) => d.id == chatId);
+          if (directIndex != -1) {
+            directChats[directIndex] = updatedChat;
+            // Update direct chat timestamp in controller
+            unreadController.updateLastMessageTime(chatId, timestamp);
+          }
+        }
+      }
+    });
+
+    // Trigger UI refresh
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _sortChatsSafely();
+    });
   }
 
   void _startReply(dynamic message) {
