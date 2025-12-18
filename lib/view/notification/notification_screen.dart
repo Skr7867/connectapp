@@ -27,12 +27,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
-      controller.fetchNotifications(); // async fetch AFTER screen loads
-    });
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await controller.refreshNotifications();
-    });
+
+    controller.fetchNotifications();
+
+    // WidgetsBinding.instance.addPostFrameCallback((_) async {
+    //   await controller.refreshNotifications();
+    // });
   }
 
   List<Notifications> _filterNotifications(List<Notifications>? notifications) {

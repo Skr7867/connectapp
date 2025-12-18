@@ -43,6 +43,7 @@ class UserProfileContainerWidget extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 // Header with back and settings buttons
+                SizedBox(height: size.height * 0.02),
                 _buildHeader(context),
                 SizedBox(height: size.height * 0.02),
 
@@ -251,20 +252,7 @@ class UserProfileContainerWidget extends StatelessWidget {
             if (isActive && premiumIconUrl != null && premiumIconUrl.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(left: 6),
-                child: CachedNetworkImage(
-                  imageUrl: premiumIconUrl,
-                  width: 20,
-                  height: 20,
-                  fit: BoxFit.contain,
-                  placeholder: (context, url) => const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      color: Colors.yellow,
-                    ),
-                  ),
-                  errorWidget: (context, url, error) => const SizedBox.shrink(),
-                ),
+                child: PremiumIcon(imageUrl: premiumIconUrl),
               ),
           ],
         ),
@@ -460,6 +448,29 @@ class ShimmerLoading extends StatefulWidget {
 
   @override
   State<ShimmerLoading> createState() => _ShimmerLoadingState();
+}
+
+class PremiumIcon extends StatelessWidget {
+  final String imageUrl;
+
+  const PremiumIcon({super.key, required this.imageUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return CachedNetworkImage(
+      imageUrl: imageUrl,
+      width: 20,
+      height: 20,
+      fit: BoxFit.contain,
+      fadeInDuration: Duration.zero, // ⬅️ important
+      placeholderFadeInDuration: Duration.zero,
+      placeholder: (_, __) => const SizedBox(
+        width: 20,
+        height: 20,
+      ),
+      errorWidget: (_, __, ___) => const SizedBox.shrink(),
+    );
+  }
 }
 
 class _ShimmerLoadingState extends State<ShimmerLoading>

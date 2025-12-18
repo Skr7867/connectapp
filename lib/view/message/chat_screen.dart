@@ -5457,8 +5457,6 @@ class _ChatScreenState extends State<ChatScreen>
     if (selectedChatId == null || currentUserId == null) return;
 
     // ✅ OPTIMISTIC UPDATE: Add the reaction immediately
-    final tempReactionId = 'temp-${DateTime.now().millisecondsSinceEpoch}';
-
     setState(() {
       // Update in all chats where the message exists
       messages.forEach((chatId, messageList) {
@@ -5473,34 +5471,41 @@ class _ChatScreenState extends State<ChatScreen>
               ),
               emoji: emoji,
             );
-
-            // Get existing reactions or create new list
-            final currentReactions = messageList[i].reactions ?? [];
-
-            // Check if user already reacted with this emoji
+            final currentReactions =
+                List<Reaction>.from(messageList[i].reactions ?? []);
             final existingIndex = currentReactions.indexWhere(
                 (r) => r.user.id == currentUserId && r.emoji == emoji);
-
             if (existingIndex >= 0) {
-              // Remove existing reaction (toggle off)
               currentReactions.removeAt(existingIndex);
             } else {
-              // Add new reaction
               currentReactions.add(tempReaction);
             }
 
-            // Update message with new reactions list
-            // messageList[i] = messageList[i].copyWith(
-            //   reactions: List<Reaction>.from(currentReactions),
-            // );
+            messageList[i] = Message(
+              id: messageList[i].id,
+              content: messageList[i].content,
+              timestamp: messageList[i].timestamp,
+              sender: messageList[i].sender,
+              isRead: messageList[i].isRead,
+              messageType: messageList[i].messageType,
+              replyTo: messageList[i].replyTo,
+              reactions: currentReactions,
+              status: messageList[i].status,
+              isEdited: messageList[i].isEdited,
+              isForwarded: messageList[i].isForwarded,
+              originalSender: messageList[i].originalSender,
+              fileInfo: messageList[i].fileInfo,
+              editedAt: messageList[i].editedAt,
+            );
 
-            // Also update in pinned messages
+            // Also update in pinned messages if it's pinned
             if (pinnedMessagesByChat.containsKey(chatId)) {
               final pinnedList = pinnedMessagesByChat[chatId]!;
               for (int j = 0; j < pinnedList.length; j++) {
                 final pinnedMsgId = _getMessageId(pinnedList[j]);
                 if (pinnedMsgId == messageId) {
                   pinnedList[j] = messageList[i];
+                  log('✅ Also updated pinned message');
                 }
               }
             }
