@@ -28,8 +28,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
   void initState() {
     super.initState();
 
-    controller.fetchNotifications();
-
+    // controller.fetchNotifications();
     // WidgetsBinding.instance.addPostFrameCallback((_) async {
     //   await controller.refreshNotifications();
     // });

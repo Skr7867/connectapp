@@ -33,7 +33,7 @@ class NotificationController extends GetxController {
   void onInit() {
     super.onInit();
     _initNotifications();
-    // fetchNotifications();
+    fetchNotifications();
     initializeSocket();
   }
 

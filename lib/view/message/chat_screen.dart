@@ -6136,15 +6136,8 @@ class _ChatScreenState extends State<ChatScreen>
       duration: const Duration(milliseconds: 300),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.blue,
+          color: const Color.fromARGB(255, 155, 153, 153).withOpacity(0.3),
           borderRadius: BorderRadius.circular(25),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
         ),
         child: Material(
           color: Colors.transparent,
@@ -6155,11 +6148,11 @@ class _ChatScreenState extends State<ChatScreen>
               _scrollToBottom(force: true);
             },
             child: Container(
-              padding: const EdgeInsets.all(12),
-              child: const Icon(
-                Icons.keyboard_arrow_down,
-                color: Colors.white,
-                size: 24,
+              padding: const EdgeInsets.all(5),
+              child: Icon(
+                Icons.keyboard_double_arrow_down_outlined,
+                color: AppColors.whiteColor,
+                size: 25,
               ),
             ),
           ),
@@ -9530,7 +9523,7 @@ class _ChatScreenState extends State<ChatScreen>
         ),
         if (_showScrollToBottom && !_isChatSearching)
           Positioned(
-            bottom: 100,
+            bottom: 150,
             right: 16,
             child: _buildScrollToBottomButton(),
           ),
