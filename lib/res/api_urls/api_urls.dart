@@ -156,6 +156,10 @@ class ApiUrls {
       '$baseUrl/connect/v1/api/user/search-courses?q=';
   static const String topCreatorCourses =
       '$baseUrl/connect/v1/api/user/get-top-creators';
+  static const String pendingFollowRequestApi =
+      '$baseUrl/connect/v1/api/social/get-pending-follow-requests';
+  static const String acceptFollowRequestApi =
+      '$baseUrl/connect/v1/api/social/respond-follow-request/';
 
   //*************************************************from here all api for creator panel*******************************/
 

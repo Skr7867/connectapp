@@ -6,6 +6,7 @@ import '../../../res/assets/image_assets.dart';
 import '../../../res/color/app_colors.dart';
 import '../../../res/fonts/app_fonts.dart';
 import '../../../res/routes/routes_name.dart';
+import '../../../view_models/controller/profile/user_profile_controller.dart';
 import '../../../view_models/controller/repostClipByUser/repost_clip_by_user_controller.dart';
 
 class RepostsTab extends StatelessWidget {
@@ -14,6 +15,7 @@ class RepostsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<ClipRepostByUserController>();
+    final userProfileController = Get.find<UserProfileController>();
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -35,7 +37,34 @@ class RepostsTab extends StatelessWidget {
             );
           case Status.COMPLETED:
             final clips = controller.repostedClips.value?.clips ?? [];
-            if (clips.isEmpty) {
+            if (userProfileController.userList.value.isPrivate == true) {
+              return Center(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      "Private Account",
+                      style: TextStyle(
+                        fontFamily: AppFonts.opensansRegular,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).textTheme.bodyLarge?.color,
+                        fontSize: 20,
+                      ),
+                    ),
+                    Text(
+                      "Follow this account to see their content.",
+                      style: TextStyle(
+                        fontFamily: AppFonts.opensansRegular,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.greyColor,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            } else if (clips.isEmpty) {
               return Center(
                 child: Text(
                   'No reposts available',

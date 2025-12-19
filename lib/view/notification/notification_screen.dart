@@ -312,48 +312,52 @@ class NotificationTile extends StatelessWidget {
           final title = (data.title ?? '').toLowerCase();
           final message = (data.message ?? '').toLowerCase();
 
-          if (type == 'xp') {
-            Get.toNamed(RouteName.streakExploreScreen);
-          } else if (type == 'social') {
-            if (title.contains('follower') ||
-                message.contains('started following')) {
-              final userId = data.fromUserId;
+          if (type == 'social') {
+            // ✅ 1. FOLLOW REQUEST (PENDING)
+            if (title.contains('follow request') ||
+                message.contains('follow request')) {
+              Get.toNamed(RouteName.pendingFollowRequestScreen);
+              return;
+            }
 
-              // Validate userId before navigation
+            // ✅ 2. STARTED FOLLOWING (PROFILE)
+            if (title.contains('started following you') ||
+                message.contains('follower')) {
+              final userId = data.fromUserId;
               if (userId != null && userId.isNotEmpty) {
-                Get.toNamed(RouteName.clipProfieScreen, arguments: userId);
-              } else {
-                Get.snackbar(
-                  'Info',
-                  'Old Comment is Depricated',
-                  backgroundColor: AppColors.blueColor,
-                  colorText: AppColors.whiteColor,
+                Get.toNamed(
+                  RouteName.clipProfieScreen,
+                  arguments: userId,
                 );
               }
-            } else if (title.contains('comment') ||
-                message.contains('commented')) {
-              // Comment Notification
+              return;
+            }
+
+            // ✅ 3. COMMENT
+            if (title.contains('comment') || message.contains('commented')) {
               final clipId = data.clipId;
               if (clipId != null) {
                 Get.toNamed(RouteName.clipPlayScreen, arguments: clipId);
               } else {
-                Get.snackbar('Info', 'Clip details not available',
-                    backgroundColor: Colors.orange);
                 Get.toNamed(RouteName.reelsPage);
               }
-            } else if (title.contains('mention') ||
-                message.contains('mentioned')) {
-              final clipId = data.clipId;
-              //  Mention Notification
-              Get.toNamed(RouteName.clipPlayScreen, arguments: clipId);
-            } else if (title.contains('clip uploaded')) {
-              final clipId = data.clipId;
-              Get.toNamed(RouteName.clipPlayScreen, arguments: clipId);
-            } else {
-              Get.toNamed(
-                RouteName.profileScreen,
-              );
+              return;
             }
+
+            // ✅ 4. MENTION
+            if (title.contains('mention') || message.contains('mentioned')) {
+              Get.toNamed(RouteName.clipPlayScreen, arguments: data.clipId);
+              return;
+            }
+
+            // ✅ 5. CLIP UPLOADED
+            if (title.contains('clip uploaded')) {
+              Get.toNamed(RouteName.clipPlayScreen, arguments: data.clipId);
+              return;
+            }
+
+            // ✅ FALLBACK
+            Get.toNamed(RouteName.profileScreen);
           } else if (type == 'avatar') {
             Get.toNamed(RouteName.usersAvatarScreen);
           } else if (type == 'level_up') {

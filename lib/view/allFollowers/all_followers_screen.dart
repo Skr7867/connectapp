@@ -51,6 +51,18 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
     return Scaffold(
       appBar: CustomAppBar(
         automaticallyImplyLeading: true,
+        actions: [
+          Row(
+            children: [
+              IconButton(
+                onPressed: () {
+                  Get.toNamed(RouteName.pendingFollowRequestScreen);
+                },
+                icon: Icon(Icons.person_add_alt),
+              )
+            ],
+          )
+        ],
       ),
       body: Container(
         color: Theme.of(context).scaffoldBackgroundColor,

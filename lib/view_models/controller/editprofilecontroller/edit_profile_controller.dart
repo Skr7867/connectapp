@@ -17,7 +17,7 @@ class EditProfileController extends GetxController {
   final twitterController = TextEditingController().obs;
   final linkedinController = TextEditingController().obs;
   final websiteController = TextEditingController().obs;
-
+  var isPrivate = false.obs;
   var isLoading = false.obs;
 
   final UpdateProfileRepository _updateProfileRepository =
@@ -40,6 +40,7 @@ class EditProfileController extends GetxController {
       twitterController.value.text = user.socialLinks?.twitter ?? '';
       linkedinController.value.text = user.socialLinks?.linkedin ?? '';
       websiteController.value.text = user.socialLinks?.website ?? '';
+      isPrivate.value = user.isPrivate ?? false;
     }
   }
 
@@ -100,6 +101,49 @@ class EditProfileController extends GetxController {
       );
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  Future<void> togglePrivateAccount(bool value) async {
+    // Optimistic UI update
+    final previousValue = isPrivate.value;
+    isPrivate.value = value;
+
+    try {
+      final LoginResponseModel? userData = await _userPreferences.getUser();
+
+      if (userData == null || userData.token.isEmpty) {
+        throw 'Authentication failed';
+      }
+
+      final updateData = {
+        'isPrivate': value,
+      };
+
+      final response = await _updateProfileRepository.updateProfile(
+        updateData,
+        userData.token,
+      );
+
+      if (response == null || response['success'] != true) {
+        throw response?['message'] ?? 'Failed to update privacy';
+      }
+
+      Utils.snackBar(
+        value ? 'Account set to private' : 'Account set to public',
+        'Success',
+      );
+
+      // Refresh profile
+      userProfileController.userList();
+    } catch (e) {
+      // Rollback on failure
+      isPrivate.value = previousValue;
+
+      Utils.snackBar(
+        e.toString(),
+        'Error',
+      );
     }
   }
 

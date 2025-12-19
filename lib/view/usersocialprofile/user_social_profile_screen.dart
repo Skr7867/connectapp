@@ -713,7 +713,7 @@ class UserSocialProfileScreen extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         border: Border.all(color: AppColors.greyColor.withOpacity(0.4)),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(10),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),

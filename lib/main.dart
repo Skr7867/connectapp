@@ -31,6 +31,7 @@ import 'view_models/controller/allFollowers/all_followers_controller.dart';
 import 'view_models/controller/getClipByid/comment_controller.dart';
 import 'view_models/controller/groupUnreadCount/group_unread_count_controller.dart';
 import 'view_models/controller/leaderboard/user_leaderboard_controller.dart';
+import 'view_models/controller/networkControllers/network_controller.dart';
 import 'view_models/controller/profile/user_profile_controller.dart';
 import 'view_models/controller/unreadCount/unread_count_controller.dart';
 
@@ -70,6 +71,7 @@ Future<void> main() async {
   Get.put(AllFollowersController(), permanent: true);
   Get.put(CommentsController(), permanent: true);
   Get.put(TaggingController(), permanent: true);
+  Get.put(NetworkController(), permanent: true);
   await NotificationMuteUtil.init();
 
   String? languageCode = prefs.getString('language_code');
@@ -279,27 +281,89 @@ class _MyAppState extends State<MyApp> {
         return;
       }
 
+      // if (type == 'social') {
+      //   if (title.contains('follower') ||
+      //       msg.contains('started following you')) {
+      //     if (fromUserId.isNotEmpty) {
+      //       Get.toNamed(RouteName.clipProfieScreen, arguments: fromUserId);
+      //     } else {
+      //       Get.snackbar('Info', 'Follower details not available',
+      //           backgroundColor: AppColors.blueColor,
+      //           colorText: AppColors.whiteColor);
+      //     }
+      //     if (title.contains('follow request') ||
+      //         msg.contains('follow request')) {
+      //       Get.toNamed(RouteName.pendingFollowRequestScreen);
+      //     } else {
+      //       Get.toNamed(RouteName.notificationScreen);
+      //     }
+      //   } else if (title.contains('comment') || msg.contains('commented')) {
+      //     if (clipId.isNotEmpty) {
+      //       Get.toNamed(
+      //         RouteName.clipPlayScreen,
+      //         arguments: clipId,
+      //       );
+      //     } else {
+      //       Get.snackbar('Info', 'Clip details not found',
+      //           backgroundColor: Colors.orange);
+      //     }
+      //   } else if (title.contains('mention') ||
+      //       msg.contains('mentioned') ||
+      //       title.contains('clip uploaded')) {
+      //     if (clipId.isNotEmpty) {
+      //       Get.toNamed(RouteName.clipPlayScreen, arguments: clipId);
+      //     } else {
+      //       Get.toNamed(RouteName.reelsPage);
+      //     }
+      //   } else {
+      //     Get.toNamed(RouteName.reelsPage);
+      //   }
+
       if (type == 'social') {
-        if (title.contains('follower') ||
-            msg.contains('started following you')) {
+        // ✅ 1. FOLLOW REQUEST (MOST IMPORTANT)
+        if (title.contains('follow request') ||
+            msg.contains('follow request')) {
+          Get.toNamed(RouteName.pendingFollowRequestScreen);
+          return;
+        }
+
+        // ✅ 2. STARTED FOLLOWING
+        if (title.contains('follower') || msg.contains('started following')) {
           if (fromUserId.isNotEmpty) {
-            Get.toNamed(RouteName.clipProfieScreen, arguments: fromUserId);
+            Get.toNamed(
+              RouteName.clipProfieScreen,
+              arguments: fromUserId,
+            );
           } else {
-            Get.snackbar('Info', 'Follower details not available',
-                backgroundColor: AppColors.blueColor,
-                colorText: AppColors.whiteColor);
+            Get.snackbar(
+              'Info',
+              'Follower details not available',
+              backgroundColor: AppColors.blueColor,
+              colorText: AppColors.whiteColor,
+            );
           }
-        } else if (title.contains('comment') || msg.contains('commented')) {
+          return;
+        }
+
+        // ✅ 3. COMMENT
+        if (title.contains('comment') || msg.contains('commented')) {
           if (clipId.isNotEmpty) {
             Get.toNamed(
               RouteName.clipPlayScreen,
               arguments: clipId,
             );
           } else {
-            Get.snackbar('Info', 'Clip details not found',
-                backgroundColor: Colors.orange);
+            Get.snackbar(
+              'Info',
+              'Clip details not found',
+              backgroundColor: Colors.orange,
+            );
           }
-        } else if (title.contains('mention') ||
+          return;
+        }
+
+        // ✅ 4. MENTION / CLIP UPLOADED
+        if (title.contains('mention') ||
             msg.contains('mentioned') ||
             title.contains('clip uploaded')) {
           if (clipId.isNotEmpty) {
@@ -307,9 +371,11 @@ class _MyAppState extends State<MyApp> {
           } else {
             Get.toNamed(RouteName.reelsPage);
           }
-        } else {
-          Get.toNamed(RouteName.reelsPage);
+          return;
         }
+
+        // ✅ FALLBACK FOR SOCIAL
+        Get.toNamed(RouteName.notificationScreen);
       } else if (type == 'avatar') {
         Get.toNamed(RouteName.usersAvatarScreen);
       } else if (type == 'level_up') {

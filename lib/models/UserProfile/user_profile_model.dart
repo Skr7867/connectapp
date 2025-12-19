@@ -27,6 +27,7 @@ class UserProfileModel {
   List<String>? loginHistory;
   bool? isDeleted;
   bool? isSuspended;
+  bool? isPrivate;
   String? createdAt;
   String? updatedAt;
   int? iV;
@@ -68,6 +69,7 @@ class UserProfileModel {
     this.isDeleted,
     this.isAlreadyCreator,
     this.isSuspended,
+    this.isPrivate,
     this.createdAt,
     this.updatedAt,
     this.iV,
@@ -150,17 +152,15 @@ class UserProfileModel {
 
     isDeleted = json['isDeleted'];
     isSuspended = json['isSuspended'];
+    isPrivate = json['isPrivate'];
     isAlreadyCreator = json['isAlreadyCreator'];
-
     createdAt = json['createdAt'];
     updatedAt = json['updatedAt'];
     iV = json['__v'];
-
     lastLogin = json['lastLogin'];
     xpToNextLevel = json['xpToNextLevel'];
     nextLevelAt = json['nextLevelAt'];
     completedCourses = json['completedCourses'];
-
     activeDaysInWeek = (json['activeDaysInWeek'] as List?)
             ?.map((e) => e.toString())
             .toList() ??
@@ -189,16 +189,13 @@ class UserProfileModel {
     data['followingCount'] = followingCount;
     data['totalLikes'] = totalLikes;
     data['bio'] = bio;
-
     if (avatar != null) data['avatar'] = avatar!.toJson();
-
     data['purchasedAvatars'] = purchasedAvatars;
     data['interests'] = interests;
     data['enrolledCourses'] = enrolledCourses;
     data['role'] = role;
     data['xp'] = xp;
     data['level'] = level;
-
     // UPDATED ✔
     if (badges != null) {
       data['badges'] = badges!.map((e) => e.toJson()).toList();
@@ -214,6 +211,7 @@ class UserProfileModel {
     data['loginHistory'] = loginHistory;
     data['isDeleted'] = isDeleted;
     data['isSuspended'] = isSuspended;
+    data['isPrivate'] = isPrivate;
     data['createdAt'] = createdAt;
     data['updatedAt'] = updatedAt;
     data['__v'] = iV;

@@ -66,6 +66,7 @@ class RouteName {
   static const viewDetailsOfCourses = '/ViewDetailsOfCourseScreen';
   static const reelsPage = '/ReelsPage';
   static const allFollowersScreen = '/AllFollowers';
+  static const pendingFollowRequestScreen = '/PendingFollowRequestScreen';
 
   //*************************from here all routes of creator Panel***************************** */
 

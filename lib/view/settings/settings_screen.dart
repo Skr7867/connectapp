@@ -9,6 +9,7 @@ import 'package:get/get.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../view_models/controller/2FA/two_fa_controller.dart';
+import '../../view_models/controller/editprofilecontroller/edit_profile_controller.dart';
 import '../../view_models/controller/language/language_controller.dart';
 import '../../view_models/controller/signup/signup_controller.dart';
 import '../../view_models/controller/themeController/theme_controller.dart';
@@ -29,6 +30,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _courseUpdates = true;
   String appVersion = "";
   final TwoFAController twoFAController = Get.put(TwoFAController());
+  final editProfileController = Get.put(EditProfileController());
   final UserPreferencesViewmodel userPreferences = UserPreferencesViewmodel();
   String token = '';
 
@@ -239,77 +241,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // Widget notificationSettings() {
-  //   return Container(
-  //     decoration: BoxDecoration(
-  //       border: Border.all(color: AppColors.greyColor.withOpacity(0.4)),
-  //       borderRadius: BorderRadius.circular(16),
-  //     ),
-  //     child: Column(
-  //       children: [
-  //         // _buildNotificationSwitchTile(
-  //         //   icon: PhosphorIconsRegular.bellSimple,
-  //         //   title: 'push_notification'.tr,
-  //         //   value: _pushNotifications,
-  //         //   onChanged: (val) => setState(() => _pushNotifications = val),
-  //         // ),
-  //         // _buildDivider(),
-  //         _buildNotificationSwitchTile(
-  //           icon: PhosphorIconsRegular.envelope,
-  //           title: 'email_notification'.tr,
-  //           value: _emailNotifications,
-  //           onChanged: (val) => setState(() => _emailNotifications = val),
-  //         ),
-  //         _buildDivider(),
-  //         _buildNotificationSwitchTile(
-  //           icon: PhosphorIconsRegular.chatCircle,
-  //           title: 'chat_notification'.tr,
-  //           value: _chatNotifications,
-  //           onChanged: (val) => setState(() => _chatNotifications = val),
-  //         ),
-  //         _buildDivider(),
-  //         _buildNotificationSwitchTile(
-  //           icon: PhosphorIconsRegular.bookOpen,
-  //           title: 'course_update'.tr,
-  //           value: _courseUpdates,
-  //           onChanged: (val) => setState(() => _courseUpdates = val),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
-
   Widget privacySecuritySettings() {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.greyColor.withOpacity(0.4)),
       ),
-      child: Obx(() => _build2FaNavigationtile(
-            icon: PhosphorIconsRegular.password,
-            title: twoFAController.isSetupComplete.value
-                ? '2fa_disable'.tr
-                : '2fa_enable'.tr,
-            onTap: () {
-              if (token.isEmpty) {
-                Get.snackbar(
-                  'Error',
-                  'Session expired. Please log in again.',
-                  snackPosition: SnackPosition.TOP,
-                  backgroundColor: Colors.red,
-                  duration: const Duration(seconds: 5),
-                  isDismissible: true,
-                );
-                Get.offNamed(RouteName.loginScreen);
-                return;
-              }
-              if (twoFAController.isSetupComplete.value) {
-                Get.toNamed(RouteName.disableTwoFa);
-              } else {
-                Get.toNamed(RouteName.twoFactorSetupScreen);
-              }
-            },
-          )),
+      child: Column(
+        children: [
+          Obx(
+            () => _build2FaNavigationtile(
+              icon: PhosphorIconsRegular.password,
+              title: twoFAController.isSetupComplete.value
+                  ? '2fa_disable'.tr
+                  : '2fa_enable'.tr,
+              onTap: () {
+                if (token.isEmpty) {
+                  Get.snackbar(
+                    'Error',
+                    'Session expired. Please log in again.',
+                    snackPosition: SnackPosition.TOP,
+                    backgroundColor: Colors.red,
+                    duration: const Duration(seconds: 5),
+                    isDismissible: true,
+                  );
+                  Get.offNamed(RouteName.loginScreen);
+                  return;
+                }
+                if (twoFAController.isSetupComplete.value) {
+                  Get.toNamed(RouteName.disableTwoFa);
+                } else {
+                  Get.toNamed(RouteName.twoFactorSetupScreen);
+                }
+              },
+            ),
+          ),
+          Obx(() => _buildNotificationSwitchTile(
+                icon: PhosphorIconsRegular.lock,
+                title: 'Private account',
+                value: editProfileController.isPrivate.value,
+                onChanged: (val) {
+                  editProfileController.togglePrivateAccount(val);
+                },
+              )),
+        ],
+      ),
     );
   }
 
