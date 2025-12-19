@@ -25,9 +25,9 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   // bool _pushNotifications = true;
-  bool _emailNotifications = true;
-  bool _chatNotifications = true;
-  bool _courseUpdates = true;
+  // bool _emailNotifications = true;
+  // bool _chatNotifications = true;
+  // bool _courseUpdates = true;
   String appVersion = "";
   final TwoFAController twoFAController = Get.put(TwoFAController());
   final editProfileController = Get.put(EditProfileController());
@@ -276,6 +276,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
             ),
           ),
+          _buildDivider(),
           Obx(() => _buildNotificationSwitchTile(
                 icon: PhosphorIconsRegular.lock,
                 title: 'Private account',
