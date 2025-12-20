@@ -6,7 +6,7 @@ import 'package:get/get.dart';
 import '../../../data/response/status.dart';
 import '../../../res/assets/image_assets.dart';
 import '../../../res/routes/routes_name.dart';
-import '../../../view_models/controller/profile/user_profile_controller.dart';
+import '../../../view_models/controller/UserSocialProfile/user_social_profile_controller.dart';
 import '../../../view_models/controller/usersAllClips/users_all_clips_controller.dart';
 
 class UsersAllClipsWidgets extends StatelessWidget {
@@ -15,7 +15,7 @@ class UsersAllClipsWidgets extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final userClips = Get.put(UsersAllClipsController());
-    final userProfileController = Get.find<UserProfileController>();
+    final userData = Get.find<UserSocialProfileController>();
     return Obx(() {
       switch (userClips.rxRequestStatus.value) {
         case Status.LOADING:
@@ -43,7 +43,35 @@ class UsersAllClipsWidgets extends StatelessWidget {
 
         case Status.COMPLETED:
           final clips = userClips.userClips.value?.clips ?? [];
-
+          final isPrivate = userData.userProfile.value?.isPrivate ?? false;
+          final isFollowing = userData.userProfile.value?.isFollowing ?? false;
+          if (isPrivate && !isFollowing) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    "Private Account",
+                    style: TextStyle(
+                      fontFamily: AppFonts.opensansRegular,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                      color: Theme.of(context).textTheme.bodyLarge?.color,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    "Follow this account to see their content.",
+                    style: TextStyle(
+                      fontFamily: AppFonts.opensansRegular,
+                      color: AppColors.greyColor,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
           if (clips.isEmpty) {
             return Center(
               child: Text(
@@ -51,37 +79,11 @@ class UsersAllClipsWidgets extends StatelessWidget {
                 style: TextStyle(
                   fontFamily: AppFonts.opensansRegular,
                   fontWeight: FontWeight.bold,
-                  color: Theme.of(context).textTheme.bodyLarge?.color,
                   fontSize: 16,
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
                 ),
               ),
             );
-          } else if (userProfileController.userList.value.isPrivate == true) {
-            return Center(
-                child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  "Private Account",
-                  style: TextStyle(
-                    fontFamily: AppFonts.opensansRegular,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).textTheme.bodyLarge?.color,
-                    fontSize: 20,
-                  ),
-                ),
-                Text(
-                  "Follow this account to see their content.",
-                  style: TextStyle(
-                    fontFamily: AppFonts.opensansRegular,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.greyColor,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ));
           }
 
           return RefreshIndicator(

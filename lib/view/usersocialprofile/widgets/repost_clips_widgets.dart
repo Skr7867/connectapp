@@ -6,7 +6,7 @@ import '../../../res/assets/image_assets.dart';
 import '../../../res/color/app_colors.dart';
 import '../../../res/fonts/app_fonts.dart';
 import '../../../res/routes/routes_name.dart';
-import '../../../view_models/controller/profile/user_profile_controller.dart';
+import '../../../view_models/controller/UserSocialProfile/user_social_profile_controller.dart';
 import '../../../view_models/controller/repostClipByUser/repost_clip_by_user_controller.dart';
 
 class RepostsTab extends StatelessWidget {
@@ -15,7 +15,7 @@ class RepostsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<ClipRepostByUserController>();
-    final userProfileController = Get.find<UserProfileController>();
+    final userData = Get.put(UserSocialProfileController());
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -37,10 +37,12 @@ class RepostsTab extends StatelessWidget {
             );
           case Status.COMPLETED:
             final clips = controller.repostedClips.value?.clips ?? [];
-            if (userProfileController.userList.value.isPrivate == true) {
+            final isPrivate = userData.userProfile.value?.isPrivate ?? false;
+            final isFollowing =
+                userData.userProfile.value?.isFollowing ?? false;
+            if (isPrivate && !isFollowing) {
               return Center(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
@@ -48,15 +50,15 @@ class RepostsTab extends StatelessWidget {
                       style: TextStyle(
                         fontFamily: AppFonts.opensansRegular,
                         fontWeight: FontWeight.bold,
-                        color: Theme.of(context).textTheme.bodyLarge?.color,
                         fontSize: 20,
+                        color: Theme.of(context).textTheme.bodyLarge?.color,
                       ),
                     ),
+                    const SizedBox(height: 6),
                     Text(
                       "Follow this account to see their content.",
                       style: TextStyle(
                         fontFamily: AppFonts.opensansRegular,
-                        fontWeight: FontWeight.bold,
                         color: AppColors.greyColor,
                         fontSize: 12,
                       ),
@@ -64,7 +66,8 @@ class RepostsTab extends StatelessWidget {
                   ],
                 ),
               );
-            } else if (clips.isEmpty) {
+            }
+            if (clips.isEmpty) {
               return Center(
                 child: Text(
                   'No reposts available',

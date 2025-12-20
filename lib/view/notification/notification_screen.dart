@@ -18,16 +18,12 @@ class NotificationScreen extends StatefulWidget {
 
 class _NotificationScreenState extends State<NotificationScreen> {
   final NotificationController controller = Get.find<NotificationController>();
-
   final TextEditingController searchController = TextEditingController();
-
   final RxString selectedFilter = 'all'.obs;
-
   final FocusNode _searchFocusNode = FocusNode();
   @override
   void initState() {
     super.initState();
-
     controller.fetchNotifications();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await controller.refreshNotifications();
@@ -313,16 +309,27 @@ class NotificationTile extends StatelessWidget {
           final message = (data.message ?? '').toLowerCase();
 
           if (type == 'social') {
-            // ✅ 1. FOLLOW REQUEST (PENDING)
+            //  FOLLOW REQUEST (PENDING)
             if (title.contains('follow request') ||
                 message.contains('follow request')) {
               Get.toNamed(RouteName.pendingFollowRequestScreen);
               return;
             }
 
-            // ✅ 2. STARTED FOLLOWING (PROFILE)
-            if (title.contains('started following you') ||
-                message.contains('follower')) {
+            // STARTED FOLLOWING (PROFILE)
+            if (title.contains('new followers') ||
+                message.contains('started following you')) {
+              final userId = data.fromUserId;
+              if (userId != null && userId.isNotEmpty) {
+                Get.toNamed(
+                  RouteName.clipProfieScreen,
+                  arguments: userId,
+                );
+              }
+              return;
+            }
+            if (title.contains('follow request accepted') ||
+                message.contains('accepted your follow request')) {
               final userId = data.fromUserId;
               if (userId != null && userId.isNotEmpty) {
                 Get.toNamed(
@@ -333,30 +340,30 @@ class NotificationTile extends StatelessWidget {
               return;
             }
 
-            // ✅ 3. COMMENT
+            // 3. COMMENT
             if (title.contains('comment') || message.contains('commented')) {
               final clipId = data.clipId;
               if (clipId != null) {
                 Get.toNamed(RouteName.clipPlayScreen, arguments: clipId);
               } else {
-                Get.toNamed(RouteName.reelsPage);
+                Get.toNamed(RouteName.profileScreen);
               }
               return;
             }
 
-            // ✅ 4. MENTION
+            //  4. MENTION
             if (title.contains('mention') || message.contains('mentioned')) {
               Get.toNamed(RouteName.clipPlayScreen, arguments: data.clipId);
               return;
             }
 
-            // ✅ 5. CLIP UPLOADED
+            //  5. CLIP UPLOADED
             if (title.contains('clip uploaded')) {
               Get.toNamed(RouteName.clipPlayScreen, arguments: data.clipId);
               return;
             }
 
-            // ✅ FALLBACK
+            //  FALLBACK
             Get.toNamed(RouteName.profileScreen);
           } else if (type == 'avatar') {
             Get.toNamed(RouteName.usersAvatarScreen);
@@ -367,6 +374,8 @@ class NotificationTile extends StatelessWidget {
           } else if (type == 'level_up') {
             Get.toNamed(RouteName.profileScreen);
           } else if (type == 'badge_earned') {
+            Get.toNamed(RouteName.streakExploreScreen);
+          } else if (type == 'xp') {
             Get.toNamed(RouteName.streakExploreScreen);
           } else {
             Get.snackbar(
