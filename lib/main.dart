@@ -53,8 +53,8 @@ Future<void> main() async {
   await _initReferralDeepLinks();
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-  Stripe.publishableKey = Myconst.publicKey;
-  await Stripe.instance.applySettings();
+  // Stripe.publishableKey = Myconst.publicKey;
+  // await Stripe.instance.applySettings();
 
   SharedPreferences prefs = await SharedPreferences.getInstance();
   Get.put(prefs);
@@ -98,7 +98,7 @@ Future<void> _initReferralDeepLinks() async {
       final prefs = await SharedPreferences.getInstance();
       prefs.setString("referralCode", ref);
       log("Referral Saved (cold start): $ref");
-      Future.microtask(() {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
         Get.offAllNamed(RouteName.signupScreen);
       });
     }
@@ -134,6 +134,18 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (Myconst.publicKey.isNotEmpty) {
+        Stripe.publishableKey = Myconst.publicKey;
+        await Stripe.instance.applySettings();
+        log("Stripe key = ${Myconst.publicKey}");
+      } else {
+        log("❌ Stripe publishable key is EMPTY in release");
+      }
+
+      await NotificationService().initialize();
+    });
     if (widget.initialMessage != null) {
       Future.microtask(() => _navigateFromMessage(widget.initialMessage!));
     }
@@ -215,8 +227,6 @@ class _MyAppState extends State<MyApp> {
           );
         }
       }
-
-      // NotificationService().showNotification(message);
     });
 
     FirebaseMessaging.onMessageOpenedApp.listen((message) {
@@ -360,17 +370,18 @@ class _MyAppState extends State<MyApp> {
     final themeController = Get.find<ThemeController>();
     final languageController = Get.find<LanguageController>();
 
-    return Obx(() => GetMaterialApp(
-          translations: Language(),
-          locale: languageController.currentLocale.value,
-          fallbackLocale: const Locale('en', 'US'),
-          debugShowCheckedModeBanner: false,
-          getPages: AppRoutes.appRoutes(),
-          theme: themeController.lightTheme,
-          darkTheme: themeController.darkTheme,
-          themeMode: themeController.isDarkMode.value
-              ? ThemeMode.dark
-              : ThemeMode.light,
-        ));
+    return Obx(
+      () => GetMaterialApp(
+        translations: Language(),
+        locale: languageController.currentLocale.value,
+        fallbackLocale: const Locale('en', 'US'),
+        debugShowCheckedModeBanner: false,
+        getPages: AppRoutes.appRoutes(),
+        theme: themeController.lightTheme,
+        darkTheme: themeController.darkTheme,
+        themeMode:
+            themeController.isDarkMode.value ? ThemeMode.dark : ThemeMode.light,
+      ),
+    );
   }
 }
