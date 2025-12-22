@@ -60,9 +60,15 @@ class CourseVideoScreen extends StatelessWidget {
                                           child: Stack(
                                             alignment: Alignment.center,
                                             children: [
-                                              VideoPlayer(controller
-                                                  .videoPlayerController
-                                                  .value!),
+                                              // Video Player with GetBuilder for targeted updates
+                                              GetBuilder<CourseVideoController>(
+                                                id: 'video_player',
+                                                builder: (controller) {
+                                                  return VideoPlayer(controller
+                                                      .videoPlayerController
+                                                      .value!);
+                                                },
+                                              ),
 
                                               // Loading Indicator when buffering
                                               if (controller
@@ -82,162 +88,195 @@ class CourseVideoScreen extends StatelessWidget {
                                                   ),
                                                 ),
 
-                                              // Play/Pause Button (center)
-                                              if (controller.showControls.value)
-                                                Center(
-                                                  child: Container(
-                                                    decoration: BoxDecoration(
-                                                      color: Colors.black
-                                                          .withOpacity(0.5),
-                                                      shape: BoxShape.circle,
-                                                    ),
-                                                    child: IconButton(
-                                                      iconSize: 64,
-                                                      icon: Icon(
-                                                        controller
-                                                                .videoPlayerController
-                                                                .value!
-                                                                .value
-                                                                .isPlaying
-                                                            ? Icons.pause
-                                                            : Icons.play_arrow,
-                                                        color: Colors.white,
+                                              // Play/Pause Button (center) with GetBuilder
+                                              GetBuilder<CourseVideoController>(
+                                                id: 'video_controls',
+                                                builder: (controller) {
+                                                  if (!controller
+                                                      .showControls.value) {
+                                                    return const SizedBox
+                                                        .shrink();
+                                                  }
+                                                  return Center(
+                                                    child: Container(
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.black
+                                                            .withOpacity(0.5),
+                                                        shape: BoxShape.circle,
                                                       ),
-                                                      onPressed: controller
-                                                          .togglePlayPause,
+                                                      child: IconButton(
+                                                        iconSize: 64,
+                                                        icon: Icon(
+                                                          controller
+                                                                  .videoPlayerController
+                                                                  .value!
+                                                                  .value
+                                                                  .isPlaying
+                                                              ? Icons.pause
+                                                              : Icons
+                                                                  .play_arrow,
+                                                          color: Colors.white,
+                                                        ),
+                                                        onPressed: controller
+                                                            .togglePlayPause,
+                                                      ),
                                                     ),
-                                                  ),
-                                                ),
+                                                  );
+                                                },
+                                              ),
 
-                                              // Bottom Controls: Progress bar & Time
-                                              if (controller.showControls.value)
-                                                Positioned(
-                                                  bottom: 0,
-                                                  left: 0,
-                                                  right: 0,
-                                                  child: Container(
-                                                    decoration: BoxDecoration(
-                                                      gradient: LinearGradient(
-                                                        begin: Alignment
-                                                            .bottomCenter,
-                                                        end:
-                                                            Alignment.topCenter,
-                                                        colors: [
-                                                          Colors.black
-                                                              .withOpacity(0.7),
-                                                          Colors.transparent,
+                                              // Bottom Controls: Progress bar & Time with GetBuilder
+                                              GetBuilder<CourseVideoController>(
+                                                id: 'video_controls',
+                                                builder: (controller) {
+                                                  if (!controller
+                                                          .showControls.value ||
+                                                      controller
+                                                              .videoPlayerController
+                                                              .value ==
+                                                          null) {
+                                                    return const SizedBox
+                                                        .shrink();
+                                                  }
+                                                  return Positioned(
+                                                    bottom: 0,
+                                                    left: 0,
+                                                    right: 0,
+                                                    child: Container(
+                                                      decoration: BoxDecoration(
+                                                        gradient:
+                                                            LinearGradient(
+                                                          begin: Alignment
+                                                              .bottomCenter,
+                                                          end: Alignment
+                                                              .topCenter,
+                                                          colors: [
+                                                            Colors.black
+                                                                .withOpacity(
+                                                                    0.7),
+                                                            Colors.transparent,
+                                                          ],
+                                                        ),
+                                                      ),
+                                                      padding: const EdgeInsets
+                                                          .symmetric(
+                                                          horizontal: 12,
+                                                          vertical: 8),
+                                                      child: Column(
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .stretch,
+                                                        children: [
+                                                          ValueListenableBuilder<
+                                                              VideoPlayerValue>(
+                                                            valueListenable:
+                                                                controller
+                                                                    .videoPlayerController
+                                                                    .value!,
+                                                            builder: (context,
+                                                                value, child) {
+                                                              return Row(
+                                                                mainAxisAlignment:
+                                                                    MainAxisAlignment
+                                                                        .spaceBetween,
+                                                                children: [
+                                                                  Text(
+                                                                    controller
+                                                                        .formatDuration(
+                                                                            value.position),
+                                                                    style: const TextStyle(
+                                                                        color: Colors
+                                                                            .white,
+                                                                        fontWeight:
+                                                                            FontWeight
+                                                                                .w600,
+                                                                        fontSize:
+                                                                            13),
+                                                                  ),
+                                                                  Text(
+                                                                    controller
+                                                                        .formatDuration(
+                                                                            value.duration),
+                                                                    style: const TextStyle(
+                                                                        color: Colors
+                                                                            .white,
+                                                                        fontWeight:
+                                                                            FontWeight
+                                                                                .w600,
+                                                                        fontSize:
+                                                                            13,
+                                                                        fontFamily:
+                                                                            AppFonts.opensansRegular),
+                                                                  ),
+                                                                ],
+                                                              );
+                                                            },
+                                                          ),
+                                                          const SizedBox(
+                                                              height: 4),
+                                                          VideoProgressIndicator(
+                                                            controller
+                                                                .videoPlayerController
+                                                                .value!,
+                                                            allowScrubbing:
+                                                                true,
+                                                            colors:
+                                                                const VideoProgressColors(
+                                                              playedColor:
+                                                                  Colors.red,
+                                                              bufferedColor:
+                                                                  Colors
+                                                                      .white54,
+                                                              backgroundColor:
+                                                                  Colors
+                                                                      .white24,
+                                                            ),
+                                                            padding:
+                                                                const EdgeInsets
+                                                                    .symmetric(
+                                                                    vertical:
+                                                                        4),
+                                                          ),
                                                         ],
                                                       ),
                                                     ),
-                                                    padding: const EdgeInsets
-                                                        .symmetric(
-                                                        horizontal: 12,
-                                                        vertical: 8),
-                                                    child: Column(
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment
-                                                              .stretch,
-                                                      children: [
-                                                        ValueListenableBuilder<
-                                                            VideoPlayerValue>(
-                                                          valueListenable:
-                                                              controller
-                                                                  .videoPlayerController
-                                                                  .value!,
-                                                          builder: (context,
-                                                              value, child) {
-                                                            return Row(
-                                                              mainAxisAlignment:
-                                                                  MainAxisAlignment
-                                                                      .spaceBetween,
-                                                              children: [
-                                                                Text(
-                                                                  controller
-                                                                      .formatDuration(
-                                                                          value
-                                                                              .position),
-                                                                  style:
-                                                                      const TextStyle(
-                                                                    color: Colors
-                                                                        .white,
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .w600,
-                                                                    fontSize:
-                                                                        13,
-                                                                  ),
-                                                                ),
-                                                                Text(
-                                                                  controller
-                                                                      .formatDuration(
-                                                                          value
-                                                                              .duration),
-                                                                  style: const TextStyle(
-                                                                      color: Colors
-                                                                          .white,
-                                                                      fontWeight:
-                                                                          FontWeight
-                                                                              .w600,
-                                                                      fontSize:
-                                                                          13,
-                                                                      fontFamily:
-                                                                          AppFonts
-                                                                              .opensansRegular),
-                                                                ),
-                                                              ],
-                                                            );
-                                                          },
-                                                        ),
-                                                        const SizedBox(
-                                                            height: 4),
-                                                        VideoProgressIndicator(
-                                                          controller
-                                                              .videoPlayerController
-                                                              .value!,
-                                                          allowScrubbing: true,
-                                                          colors:
-                                                              const VideoProgressColors(
-                                                            playedColor:
-                                                                Colors.red,
-                                                            bufferedColor:
-                                                                Colors.white54,
-                                                            backgroundColor:
-                                                                Colors.white24,
-                                                          ),
-                                                          padding:
-                                                              const EdgeInsets
-                                                                  .symmetric(
-                                                                  vertical: 4),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                ),
+                                                  );
+                                                },
+                                              ),
 
-                                              // Orientation Button (top right)
-                                              if (controller.showControls.value)
-                                                Positioned(
-                                                  top: 8,
-                                                  right: 8,
-                                                  child: Container(
-                                                    decoration: BoxDecoration(
-                                                      color: Colors.black
-                                                          .withOpacity(0.5),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              8),
-                                                    ),
-                                                    child: IconButton(
-                                                      icon: const Icon(
-                                                        Icons.screen_rotation,
-                                                        color: Colors.white,
-                                                        size: 26,
+                                              // Orientation Button (top right) with GetBuilder
+                                              GetBuilder<CourseVideoController>(
+                                                id: 'video_controls',
+                                                builder: (controller) {
+                                                  if (!controller
+                                                      .showControls.value) {
+                                                    return const SizedBox
+                                                        .shrink();
+                                                  }
+                                                  return Positioned(
+                                                    top: 8,
+                                                    right: 8,
+                                                    child: Container(
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.black
+                                                            .withOpacity(0.5),
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(8),
                                                       ),
-                                                      onPressed: controller
-                                                          .toggleOrientation,
+                                                      child: IconButton(
+                                                        icon: const Icon(
+                                                          Icons.screen_rotation,
+                                                          color: Colors.white,
+                                                          size: 26,
+                                                        ),
+                                                        onPressed: controller
+                                                            .toggleOrientation,
+                                                      ),
                                                     ),
-                                                  ),
-                                                ),
+                                                  );
+                                                },
+                                              ),
                                             ],
                                           ),
                                         ),
@@ -514,7 +553,6 @@ class CourseVideoScreen extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            // color: Theme.of(context).cardColor,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: Colors.deepPurpleAccent.withOpacity(0.2),
@@ -627,7 +665,6 @@ class CourseVideoScreen extends StatelessWidget {
                         const SizedBox(height: 12),
                         Container(
                           decoration: BoxDecoration(
-                            // color: Theme.of(context).cardColor,
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
                               color: Colors.deepPurpleAccent.withOpacity(0.3),
@@ -755,7 +792,6 @@ class CourseVideoScreen extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        // color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isCompleted

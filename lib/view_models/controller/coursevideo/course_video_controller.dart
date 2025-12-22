@@ -41,6 +41,11 @@ class CourseVideoController extends GetxController
   final showControls = true.obs;
   Timer? _hideControlsTimer;
 
+  // NEW: Video preloading variables
+  final Map<String, VideoPlayerController> _preloadedVideoControllers = {};
+  final Map<String, bool> _preloadStatus = {};
+  final RxBool _isPreloadingActive = false.obs;
+
   // TextEditingController for review field to properly clear text
   final reviewTextController = TextEditingController();
 
@@ -55,6 +60,61 @@ class CourseVideoController extends GetxController
     initializeLessons();
     checkCourseSubmissionStatus();
     initializeVideoPlayer();
+
+    // NEW: Start preloading videos after initialization
+    _startVideoPreloading();
+  }
+
+  // NEW: Method to preload all video lessons
+  Future<void> _startVideoPreloading() async {
+    if (_isPreloadingActive.value) return;
+
+    _isPreloadingActive.value = true;
+
+    // Get all video lessons
+    final videoLessons = allLessons
+        .where((lesson) =>
+            lesson.contentType == 'video' &&
+            lesson.videoUrl != null &&
+            lesson.videoUrl!.isNotEmpty)
+        .toList();
+
+    // Preload videos sequentially to avoid overwhelming the network
+    for (var lesson in videoLessons) {
+      if (!_preloadStatus.containsKey(lesson.videoUrl!) ||
+          _preloadStatus[lesson.videoUrl!] == false) {
+        await _preloadVideo(lesson.videoUrl!);
+      }
+    }
+
+    _isPreloadingActive.value = false;
+  }
+
+  // NEW: Preload individual video
+  Future<void> _preloadVideo(String videoUrl) async {
+    if (_preloadedVideoControllers.containsKey(videoUrl)) return;
+
+    try {
+      _preloadStatus[videoUrl] = false;
+      final controller = VideoPlayerController.network(videoUrl);
+
+      // Store controller before initialization
+      _preloadedVideoControllers[videoUrl] = controller;
+
+      // Initialize in background
+      await controller.initialize();
+
+      // Set to beginning and pause
+      await controller.seekTo(Duration.zero);
+      controller.pause();
+
+      _preloadStatus[videoUrl] = true;
+      print('Preloaded video: $videoUrl');
+    } catch (e) {
+      print('Failed to preload video $videoUrl: $e');
+      _preloadedVideoControllers.remove(videoUrl);
+      _preloadStatus.remove(videoUrl);
+    }
   }
 
   void updateRating(int rating) {
@@ -201,26 +261,47 @@ class CourseVideoController extends GetxController
 
   void initializeVideoPlayer() {
     if (currentLesson.value != null && currentLesson.value!.videoUrl != null) {
+      final videoUrl = currentLesson.value!.videoUrl!;
+
       // Show loading state
       isVideoInitialized.value = false;
 
-      videoPlayerController.value =
-          VideoPlayerController.network(currentLesson.value!.videoUrl!)
-            ..initialize().then((_) {
-              isVideoInitialized.value = true;
-              // Add listener for real-time state updates
-              videoPlayerController.value?.addListener(_videoPlayerListener);
-              update();
-            }).catchError((error) {
-              isVideoInitialized.value = false;
-              Get.snackbar(
-                'Failed',
-                'Failed to load video',
-                snackPosition: SnackPosition.TOP,
-                backgroundColor: Colors.red,
-                colorText: Colors.white,
-              );
-            });
+      // NEW: Check if video is preloaded
+      if (_preloadedVideoControllers.containsKey(videoUrl) &&
+          _preloadStatus[videoUrl] == true) {
+        // Use preloaded controller
+        videoPlayerController.value = _preloadedVideoControllers[videoUrl];
+        isVideoInitialized.value = true;
+
+        // Add listener for real-time state updates
+        videoPlayerController.value?.addListener(_videoPlayerListener);
+
+        // Play immediately if it's a completed lesson
+        if (currentLesson.value?.isCompleted == true) {
+          videoPlayerController.value?.play();
+          _startHideControlsTimer();
+        }
+
+        update();
+      } else {
+        // Fallback to network loading
+        videoPlayerController.value = VideoPlayerController.network(videoUrl)
+          ..initialize().then((_) {
+            isVideoInitialized.value = true;
+            // Add listener for real-time state updates
+            videoPlayerController.value?.addListener(_videoPlayerListener);
+            update();
+          }).catchError((error) {
+            isVideoInitialized.value = false;
+            Get.snackbar(
+              'Failed',
+              'Failed to load video',
+              snackPosition: SnackPosition.TOP,
+              backgroundColor: Colors.red,
+              colorText: Colors.white,
+            );
+          });
+      }
     }
   }
 
@@ -239,18 +320,34 @@ class CourseVideoController extends GetxController
         isVideoInitialized.value = false;
 
         videoPlayerController.value?.removeListener(_videoPlayerListener);
-        videoPlayerController.value?.dispose();
+        // Don't dispose if it's a preloaded controller (we'll reuse it)
+        if (!_preloadedVideoControllers
+            .containsValue(videoPlayerController.value)) {
+          videoPlayerController.value?.dispose();
+        }
 
-        videoPlayerController.value =
-            VideoPlayerController.network(currentLesson.value!.videoUrl!)
-              ..initialize().then((_) {
-                isVideoInitialized.value = true;
-                videoPlayerController.value?.addListener(_videoPlayerListener);
-                videoPlayerController.value!.play();
-                update();
-              }).catchError((error) {
-                isVideoInitialized.value = false;
-              });
+        final videoUrl = currentLesson.value!.videoUrl!;
+
+        // NEW: Check if next video is preloaded
+        if (_preloadedVideoControllers.containsKey(videoUrl) &&
+            _preloadStatus[videoUrl] == true) {
+          videoPlayerController.value = _preloadedVideoControllers[videoUrl];
+          isVideoInitialized.value = true;
+          videoPlayerController.value?.addListener(_videoPlayerListener);
+          videoPlayerController.value!.play();
+          _startHideControlsTimer();
+          update();
+        } else {
+          videoPlayerController.value = VideoPlayerController.network(videoUrl)
+            ..initialize().then((_) {
+              isVideoInitialized.value = true;
+              videoPlayerController.value?.addListener(_videoPlayerListener);
+              videoPlayerController.value!.play();
+              update();
+            }).catchError((error) {
+              isVideoInitialized.value = false;
+            });
+        }
         return;
       }
     }
@@ -438,31 +535,57 @@ class CourseVideoController extends GetxController
     currentLessonIndex.value = index;
 
     if (lesson.contentType == 'video' && lesson.videoUrl != null) {
+      final videoUrl = lesson.videoUrl!;
+
+      // Show loading state
       isVideoInitialized.value = false;
+      showControls.value = true; // Show controls when switching videos
 
+      // Dispose current controller if it's not a preloaded one
       videoPlayerController.value?.removeListener(_videoPlayerListener);
-      videoPlayerController.value?.dispose();
+      if (!_preloadedVideoControllers
+          .containsValue(videoPlayerController.value)) {
+        videoPlayerController.value?.dispose();
+      }
 
-      videoPlayerController.value =
-          VideoPlayerController.network(lesson.videoUrl!)
-            ..initialize().then((_) {
-              isVideoInitialized.value = true;
-              videoPlayerController.value?.addListener(_videoPlayerListener);
-              if (lesson.isCompleted!) {
-                videoPlayerController.value!.play();
-                _startHideControlsTimer();
-              }
-              update();
-            }).catchError((error) {
-              isVideoInitialized.value = false;
-              Get.snackbar(
-                'Failed',
-                'Failed to load video',
-                snackPosition: SnackPosition.TOP,
-                backgroundColor: Colors.red,
-                colorText: Colors.white,
-              );
-            });
+      // NEW: Check if video is preloaded
+      if (_preloadedVideoControllers.containsKey(videoUrl) &&
+          _preloadStatus[videoUrl] == true) {
+        // Use preloaded controller for instant playback
+        videoPlayerController.value = _preloadedVideoControllers[videoUrl];
+        isVideoInitialized.value = true;
+
+        // Add listener
+        videoPlayerController.value?.addListener(_videoPlayerListener);
+
+        // Play immediately
+        videoPlayerController.value!.play();
+        _startHideControlsTimer();
+
+        update(['video_player', 'video_controls']);
+      } else {
+        // Fallback to network loading
+        videoPlayerController.value = VideoPlayerController.network(videoUrl)
+          ..initialize().then((_) {
+            isVideoInitialized.value = true;
+            videoPlayerController.value?.addListener(_videoPlayerListener);
+
+            // Play after initialization
+            videoPlayerController.value!.play();
+            _startHideControlsTimer();
+
+            update(['video_player', 'video_controls']);
+          }).catchError((error) {
+            isVideoInitialized.value = false;
+            Get.snackbar(
+              'Failed',
+              'Failed to load video',
+              snackPosition: SnackPosition.TOP,
+              backgroundColor: Colors.red,
+              colorText: Colors.white,
+            );
+          });
+      }
     } else if (lesson.contentType == 'quiz') {
       Get.toNamed(RouteName.quizScreen, arguments: lesson)?.then((result) {
         if (result != null && result is Map<String, dynamic>) {
@@ -488,7 +611,6 @@ class CourseVideoController extends GetxController
         }
       });
     }
-    update();
   }
 
   void submitLesson(Lesson lesson) async {
@@ -528,8 +650,8 @@ class CourseVideoController extends GetxController
         showControls.value = true;
         _startHideControlsTimer();
       }
-      // Force immediate UI update
-      update();
+      // Force immediate UI update with specific ID for faster response
+      update(['video_controls']);
     }
   }
 
@@ -542,6 +664,9 @@ class CourseVideoController extends GetxController
     } else {
       _hideControlsTimer?.cancel();
     }
+
+    // Update only controls
+    update(['video_controls']);
   }
 
   void _startHideControlsTimer() {
@@ -549,6 +674,7 @@ class CourseVideoController extends GetxController
     _hideControlsTimer = Timer(const Duration(seconds: 3), () {
       if (videoPlayerController.value?.value.isPlaying == true) {
         showControls.value = false;
+        update(['video_controls']);
       }
     });
   }
@@ -571,8 +697,19 @@ class CourseVideoController extends GetxController
 
   @override
   void onClose() {
+    // Dispose all preloaded controllers
+    _preloadedVideoControllers.values.forEach((controller) {
+      controller.dispose();
+    });
+    _preloadedVideoControllers.clear();
+    _preloadStatus.clear();
+
     videoPlayerController.value?.removeListener(_videoPlayerListener);
-    videoPlayerController.value?.dispose();
+    if (!_preloadedVideoControllers
+        .containsValue(videoPlayerController.value)) {
+      videoPlayerController.value?.dispose();
+    }
+
     tabController.dispose();
     _hideControlsTimer?.cancel();
     reviewTextController.dispose();
