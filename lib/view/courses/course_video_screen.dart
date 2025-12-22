@@ -172,16 +172,17 @@ class CourseVideoScreen extends StatelessWidget {
                                                                       .formatDuration(
                                                                           value
                                                                               .duration),
-                                                                  style:
-                                                                      const TextStyle(
-                                                                    color: Colors
-                                                                        .white,
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .w600,
-                                                                    fontSize:
-                                                                        13,
-                                                                  ),
+                                                                  style: const TextStyle(
+                                                                      color: Colors
+                                                                          .white,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .w600,
+                                                                      fontSize:
+                                                                          13,
+                                                                      fontFamily:
+                                                                          AppFonts
+                                                                              .opensansRegular),
                                                                 ),
                                                               ],
                                                             );
@@ -263,22 +264,6 @@ class CourseVideoScreen extends StatelessWidget {
                                                   ? screenHeight * 0.35
                                                   : screenHeight * 0.7,
                                               fit: BoxFit.cover,
-                                            ),
-                                          ),
-                                          // Play overlay for thumbnail
-                                          Center(
-                                            child: Container(
-                                              padding: const EdgeInsets.all(20),
-                                              decoration: BoxDecoration(
-                                                color: Colors.black
-                                                    .withOpacity(0.6),
-                                                shape: BoxShape.circle,
-                                              ),
-                                              child: const Icon(
-                                                Icons.play_arrow,
-                                                color: Colors.white,
-                                                size: 50,
-                                              ),
                                             ),
                                           ),
                                         ],

@@ -29,7 +29,7 @@ class UploadProgressController extends GetxController {
   var isUploading = false.obs;
   var uploadProgress = 0.0.obs;
   var uploadingFileName = ''.obs;
-  var uploadStatus = ''.obs; // 'uploading', 'processing', 'completed', 'failed'
+  var uploadStatus = ''.obs;
 
   void startUpload(String fileName) {
     isUploading.value = true;
@@ -74,6 +74,90 @@ class UploadProgressController extends GetxController {
   }
 }
 
+// Video Controller Manager - Manages controllers for efficient memory usage
+class VideoControllerManager {
+  final Map<String, VideoPlayerController> _controllers = {};
+  final Map<String, bool> _initializedControllers = {};
+  final int maxCachedControllers = 5; // Keep only 5 controllers in memory
+
+  Future<VideoPlayerController?> getOrCreateController(
+    String clipId,
+    String videoUrl,
+  ) async {
+    // Return existing controller if available
+    if (_controllers.containsKey(clipId)) {
+      log('Reusing existing controller for clip: $clipId');
+      return _controllers[clipId];
+    }
+
+    // Clean up old controllers if we have too many
+    if (_controllers.length >= maxCachedControllers) {
+      _cleanupOldControllers();
+    }
+
+    try {
+      log('Creating new controller for clip: $clipId');
+      final controller = VideoPlayerController.network(videoUrl);
+      await controller.initialize();
+      controller.setLooping(true);
+
+      _controllers[clipId] = controller;
+      _initializedControllers[clipId] = true;
+
+      log('Controller initialized successfully for clip: $clipId');
+      return controller;
+    } catch (e) {
+      log('Error creating controller for clip $clipId: $e');
+      return null;
+    }
+  }
+
+  void _cleanupOldControllers() {
+    if (_controllers.length <= maxCachedControllers) return;
+
+    // Remove oldest controllers (keep most recent 3)
+    final keys = _controllers.keys.toList();
+    final toRemove = keys.take(keys.length - 3).toList();
+
+    for (final key in toRemove) {
+      log('Disposing old controller: $key');
+      _controllers[key]?.dispose();
+      _controllers.remove(key);
+      _initializedControllers.remove(key);
+    }
+  }
+
+  void pauseAll() {
+    for (final controller in _controllers.values) {
+      if (controller.value.isPlaying) {
+        controller.pause();
+      }
+    }
+  }
+
+  void disposeController(String clipId) {
+    if (_controllers.containsKey(clipId)) {
+      log('Disposing controller: $clipId');
+      _controllers[clipId]?.dispose();
+      _controllers.remove(clipId);
+      _initializedControllers.remove(clipId);
+    }
+  }
+
+  void disposeAll() {
+    log('Disposing all controllers');
+    for (final controller in _controllers.values) {
+      controller.dispose();
+    }
+    _controllers.clear();
+    _initializedControllers.clear();
+  }
+
+  bool isInitialized(String clipId) {
+    return _initializedControllers[clipId] == true;
+  }
+}
+
 class ReelsPage extends StatefulWidget {
   const ReelsPage({super.key});
 
@@ -86,6 +170,9 @@ class _ReelsPageState extends State<ReelsPage>
   final PageController _pageController = PageController();
   final repostController = Get.put(RepostClipController());
   final uploadProgressController = Get.put(UploadProgressController());
+  final VideoControllerManager _videoControllerManager =
+      VideoControllerManager();
+
   int currentIndex = 0;
   bool _isPageActive = true;
   bool _isCurrentTab = false;
@@ -93,7 +180,7 @@ class _ReelsPageState extends State<ReelsPage>
   late ReelsDataManager _reelsManager;
   late NavbarController _navController;
 
-  static const int clipsToPreload = 3;
+  static const int clipsToPreload = 2; // Reduced from 3 for better performance
 
   @override
   bool get wantKeepAlive => true;
@@ -107,11 +194,10 @@ class _ReelsPageState extends State<ReelsPage>
 
     try {
       _navController = Get.find<NavbarController>();
-
-      final initialIndex = _navController!.currentIndex.value;
+      final initialIndex = _navController.currentIndex.value;
       _isCurrentTab = initialIndex == 2;
 
-      _navController!.currentIndex.listen((index) {
+      _navController.currentIndex.listen((index) {
         if (mounted) {
           final wasCurrentTab = _isCurrentTab;
           final isNowCurrentTab = index == 2;
@@ -126,6 +212,9 @@ class _ReelsPageState extends State<ReelsPage>
                 setState(() {});
               }
             });
+          } else if (wasCurrentTab && !isNowCurrentTab) {
+            // Pause all videos when leaving tab
+            _videoControllerManager.pauseAll();
           }
         }
       });
@@ -140,17 +229,26 @@ class _ReelsPageState extends State<ReelsPage>
     setState(() {
       _isPageActive = state == AppLifecycleState.resumed;
     });
+
+    if (state != AppLifecycleState.resumed) {
+      _videoControllerManager.pauseAll();
+    }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _pageController.dispose();
+    _videoControllerManager.disposeAll();
     super.dispose();
   }
 
   void _checkAndLoadMore() {
-    if (currentIndex >= _reelsManager.clips.length - clipsToPreload) {
+    final remainingClips = _reelsManager.clips.length - currentIndex;
+    log('Current index: $currentIndex, Total clips: ${_reelsManager.clips.length}, Remaining: $remainingClips');
+
+    if (remainingClips <= clipsToPreload && _reelsManager.hasNextPage.value) {
+      log('Triggering load more clips');
       _reelsManager.loadMoreClips();
     }
   }
@@ -166,6 +264,13 @@ class _ReelsPageState extends State<ReelsPage>
 
   Future<void> _refreshReels() async {
     await _reelsManager.refreshClips();
+    // Reset to first page after refresh
+    if (_pageController.hasClients && _reelsManager.clips.isNotEmpty) {
+      _pageController.jumpToPage(0);
+      setState(() {
+        currentIndex = 0;
+      });
+    }
   }
 
   void _updateClipFollowStatus(
@@ -183,7 +288,7 @@ class _ReelsPageState extends State<ReelsPage>
         children: [
           Obx(() => _buildBody()),
 
-          // Upload Progress Indicator
+          // Upload Progress Indicator (keeping your existing code)
           Obx(() {
             if (uploadProgressController.isUploading.value) {
               final status = uploadProgressController.uploadStatus.value;
@@ -533,6 +638,7 @@ class _ReelsPageState extends State<ReelsPage>
             controller: _pageController,
             scrollDirection: Axis.vertical,
             onPageChanged: (index) {
+              log('Page changed to index: $index');
               setState(() {
                 currentIndex = index;
               });
@@ -549,11 +655,13 @@ class _ReelsPageState extends State<ReelsPage>
                 isCurrentPage: shouldPlay,
                 onAddPressed: _navigateToUpload,
                 onFollowStatusChanged: _updateClipFollowStatus,
+                videoControllerManager: _videoControllerManager,
               );
             },
           ),
         ),
-        if (_reelsManager.isLoading.value && _reelsManager.clips.isNotEmpty)
+        if (_reelsManager
+            .isLoadingMore.value) // Use isLoadingMore instead of isLoading
           Positioned(
             bottom: 120,
             left: 0,
@@ -568,28 +676,6 @@ class _ReelsPageState extends State<ReelsPage>
                     color: Colors.white.withOpacity(0.1),
                   ),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    ),
-                    SizedBox(width: 12),
-                    Text(
-                      'Loading more clips...',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
               ),
             ),
           ),
@@ -599,12 +685,15 @@ class _ReelsPageState extends State<ReelsPage>
 }
 
 // ReelItem remains mostly the same, just update the _navigateToUpload call
+
+// ReelItem with optimized video controller management
 class ReelItem extends StatefulWidget {
   final dynamic clip;
   final bool isCurrentPage;
   final VoidCallback onAddPressed;
   final Function(String userId, bool isFollowing, int followerCount)
       onFollowStatusChanged;
+  final VideoControllerManager videoControllerManager;
 
   const ReelItem({
     super.key,
@@ -612,6 +701,7 @@ class ReelItem extends StatefulWidget {
     required this.isCurrentPage,
     required this.onAddPressed,
     required this.onFollowStatusChanged,
+    required this.videoControllerManager,
   });
 
   @override
@@ -619,15 +709,13 @@ class ReelItem extends StatefulWidget {
 }
 
 class _ReelItemState extends State<ReelItem>
-    with WidgetsBindingObserver, AutomaticKeepAliveClientMixin {
+    with AutomaticKeepAliveClientMixin {
   VideoPlayerController? _controller;
   bool isLiked = false;
   bool isVideoReady = false;
   bool showFullCaption = false;
   bool showAllTags = false;
   int currentCommentCount = 0;
-  bool _isAppInForeground = true;
-  bool _wasPlayingBeforeBackground = false;
   bool _isManuallyPaused = false;
   Timer? _singleTapTimer;
   Timer? _pauseIndicatorTimer;
@@ -646,53 +734,25 @@ class _ReelItemState extends State<ReelItem>
   final TextEditingController _reportDescriptionController =
       TextEditingController();
 
+  bool _isInitializingVideo = false;
+  bool _hasError = false;
+
   @override
   bool get wantKeepAlive => true;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     isLiked = widget.clip['isLiked'] ?? false;
     currentCommentCount = widget.clip['commentCount'] ?? 0;
 
     final user = widget.clip['userId'];
-    final clipId = widget.clip['_id'];
     followerCount = user['followerCount'] ?? 0;
     isFollowing = widget.clip['isFollowing'] ?? false;
 
-    _initializeVideo();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-
-    switch (state) {
-      case AppLifecycleState.resumed:
-        _isAppInForeground = true;
-        if (widget.isCurrentPage &&
-            _controller != null &&
-            isVideoReady &&
-            !_isManuallyPaused) {
-          _controller!.play();
-        }
-        break;
-      case AppLifecycleState.paused:
-      case AppLifecycleState.inactive:
-        _isAppInForeground = false;
-        if (_controller != null && _controller!.value.isPlaying) {
-          _wasPlayingBeforeBackground = true;
-          _controller!.pause();
-        } else {
-          _wasPlayingBeforeBackground = false;
-        }
-        break;
-      case AppLifecycleState.detached:
-        _controller?.dispose();
-        break;
-      default:
-        break;
+    // Initialize video if this is the current page
+    if (widget.isCurrentPage) {
+      _initializeVideo();
     }
   }
 
@@ -706,13 +766,14 @@ class _ReelItemState extends State<ReelItem>
       isFollowing = widget.clip['isFollowing'] ?? false;
     }
 
+    // Handle page changes
     if (widget.isCurrentPage && !oldWidget.isCurrentPage) {
-      if (_controller != null && isVideoReady && !_isManuallyPaused) {
-        _controller!.play();
-      } else if (_controller == null) {
-        _initializeVideo();
-      }
+      // This clip is now visible
+      log('Clip ${widget.clip['_id']} became visible');
+      _initializeVideo();
     } else if (!widget.isCurrentPage && oldWidget.isCurrentPage) {
+      // This clip is no longer visible
+      log('Clip ${widget.clip['_id']} hidden');
       if (_controller != null && _controller!.value.isPlaying) {
         _controller!.pause();
       }
@@ -720,32 +781,61 @@ class _ReelItemState extends State<ReelItem>
   }
 
   void _initializeVideo() async {
-    final processedUrl = widget.clip['processedUrl'];
-    if (processedUrl == null) {
+    if (_isInitializingVideo) {
+      log('Already initializing video for ${widget.clip['_id']}');
       return;
     }
 
+    final processedUrl = widget.clip['processedUrl'];
+    if (processedUrl == null || processedUrl.isEmpty) {
+      log('No processed URL for clip ${widget.clip['_id']}');
+      setState(() {
+        _hasError = true;
+      });
+      return;
+    }
+
+    setState(() {
+      _isInitializingVideo = true;
+      _hasError = false;
+    });
+
     try {
-      _controller = VideoPlayerController.network(processedUrl);
-      await _controller!.initialize();
+      log('Initializing video for clip: ${widget.clip['_id']}');
+
+      // Use the controller manager to get or create controller
+      final controller =
+          await widget.videoControllerManager.getOrCreateController(
+        widget.clip['_id'],
+        processedUrl,
+      );
+
+      if (controller == null) {
+        throw Exception('Failed to create video controller');
+      }
 
       if (mounted) {
         setState(() {
+          _controller = controller;
           isVideoReady = true;
+          _isInitializingVideo = false;
         });
 
-        _controller!.setLooping(true);
-
+        // Auto-play if this is the current page and not manually paused
         if (widget.isCurrentPage && !_isManuallyPaused) {
           _controller!.play();
+          log('Started playing clip: ${widget.clip['_id']}');
         }
 
         _controller!.addListener(_videoStateListener);
       }
     } catch (error) {
+      log('Error initializing video for ${widget.clip['_id']}: $error');
       if (mounted) {
         setState(() {
           isVideoReady = false;
+          _isInitializingVideo = false;
+          _hasError = true;
         });
       }
     }
@@ -762,12 +852,13 @@ class _ReelItemState extends State<ReelItem>
     _singleTapTimer?.cancel();
     _pauseIndicatorTimer?.cancel();
     _reportDescriptionController.dispose();
-    WidgetsBinding.instance.removeObserver(this);
-    _controller?.dispose();
+
+    // Remove listener but don't dispose controller - it's managed by VideoControllerManager
+    _controller?.removeListener(_videoStateListener);
+
     super.dispose();
   }
 
-  // Add method to pause video when navigating away
   void _pauseVideoForNavigation() {
     if (_controller != null && _controller!.value.isPlaying) {
       _controller!.pause();
@@ -778,6 +869,7 @@ class _ReelItemState extends State<ReelItem>
     }
   }
 
+  // Keep all your existing methods (toggleLike, toggleFollow, share, etc.)
   Future<void> _toggleLike() async {
     final UserPreferencesViewmodel userPreferences = UserPreferencesViewmodel();
     LoginResponseModel? userData = await userPreferences.getUser();
@@ -1256,6 +1348,7 @@ class _ReelItemState extends State<ReelItem>
     );
   }
 
+  // Keep your existing report methods...
   void _showReportDialog(BuildContext context) {
     _selectedReportReason = null;
     _reportDescription = '';
@@ -1499,6 +1592,7 @@ class _ReelItemState extends State<ReelItem>
     return Stack(
       fit: StackFit.expand,
       children: [
+        // Video Player or Thumbnail
         Positioned.fill(
           child: _controller != null && isVideoReady
               ? GestureDetector(
@@ -1513,40 +1607,98 @@ class _ReelItemState extends State<ReelItem>
               : Center(
                   child: AspectRatio(
                     aspectRatio: 9 / 16,
-                    child: Image.network(
-                      widget.clip['thumbnailUrl'] ?? '',
-                      fit: BoxFit.cover,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return Container(
-                          color: Colors.black,
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              value: loadingProgress.expectedTotalBytes != null
-                                  ? loadingProgress.cumulativeBytesLoaded /
-                                      loadingProgress.expectedTotalBytes!
-                                  : null,
-                              color: Colors.white,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.network(
+                          widget.clip['thumbnailUrl'] ?? '',
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Container(
+                              color: Colors.black,
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  value: loadingProgress.expectedTotalBytes !=
+                                          null
+                                      ? loadingProgress.cumulativeBytesLoaded /
+                                          loadingProgress.expectedTotalBytes!
+                                      : null,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: Colors.black,
+                              child: Center(
+                                child: Icon(
+                                  Icons.error,
+                                  color: Colors.white,
+                                  size: 50,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        if (_isInitializingVideo)
+                          // Container(
+                          //   color: Colors.black.withOpacity(0.5),
+                          //   child: Center(
+                          //     child: Column(
+                          //       mainAxisAlignment: MainAxisAlignment.center,
+                          //       children: [
+                          //         CircularProgressIndicator(
+                          //             color: Colors.white),
+                          //       ],
+                          //     ),
+                          //   ),
+                          // ),
+                          if (_hasError)
+                            Container(
+                              color: Colors.black.withOpacity(0.7),
+                              child: Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.error_outline,
+                                      color: Colors.white,
+                                      size: 50,
+                                    ),
+                                    SizedBox(height: 16),
+                                    Text(
+                                      'Failed to load video',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    SizedBox(height: 8),
+                                    TextButton(
+                                      onPressed: () {
+                                        setState(() {
+                                          _hasError = false;
+                                        });
+                                        _initializeVideo();
+                                      },
+                                      child: Text(
+                                        'Retry',
+                                        style: TextStyle(color: Colors.blue),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
-                          ),
-                        );
-                      },
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: Colors.black,
-                          child: Center(
-                            child: Icon(
-                              Icons.error,
-                              color: Colors.white,
-                              size: 50,
-                            ),
-                          ),
-                        );
-                      },
+                      ],
                     ),
                   ),
                 ),
         ),
+
+        // Like Animation
         if (_showLikeAnimation)
           Center(
             child: AnimatedScale(
@@ -1570,6 +1722,8 @@ class _ReelItemState extends State<ReelItem>
               ),
             ),
           ),
+
+        // Pause Indicator
         if (_controller != null &&
             isVideoReady &&
             _isManuallyPaused &&
@@ -1591,6 +1745,8 @@ class _ReelItemState extends State<ReelItem>
               ),
             ),
           ),
+
+        // Bottom Gradient
         Positioned(
           bottom: 0,
           left: 0,
@@ -1609,6 +1765,8 @@ class _ReelItemState extends State<ReelItem>
             ),
           ),
         ),
+
+        // Action Buttons (Right Side)
         Positioned(
           right: 16,
           bottom: 20,
@@ -1709,6 +1867,8 @@ class _ReelItemState extends State<ReelItem>
             ],
           ),
         ),
+
+        // User Info and Caption (Bottom Left)
         Positioned(
           left: 16,
           right: 80,
@@ -1912,6 +2072,8 @@ class _ReelItemState extends State<ReelItem>
             ],
           ),
         ),
+
+        // Progress Indicator
         if (_controller != null && isVideoReady)
           Positioned(
             bottom: 0,
@@ -1978,6 +2140,8 @@ class ActionButton extends StatelessWidget {
     );
   }
 }
+
+// Keep all your existing UploadVideoPage, VideoPreviewPage, and AddCaptionPage code unchanged...
 
 class UploadVideoPage extends StatefulWidget {
   const UploadVideoPage({super.key});
