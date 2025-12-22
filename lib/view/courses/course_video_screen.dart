@@ -546,7 +546,7 @@ class CourseVideoScreen extends StatelessWidget {
 
                   // Description Tab
                   SingleChildScrollView(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(10),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -634,7 +634,7 @@ class CourseVideoScreen extends StatelessWidget {
                                           borderRadius:
                                               BorderRadius.circular(30),
                                           child: Container(
-                                            padding: const EdgeInsets.all(8),
+                                            padding: const EdgeInsets.all(6),
                                             child: Icon(
                                               index <
                                                       controller
@@ -642,7 +642,7 @@ class CourseVideoScreen extends StatelessWidget {
                                                   ? Icons.star
                                                   : Icons.star_border,
                                               color: Colors.amber,
-                                              size: screenWidth * 0.09,
+                                              size: screenWidth * 0.07,
                                             ),
                                           ),
                                         ),

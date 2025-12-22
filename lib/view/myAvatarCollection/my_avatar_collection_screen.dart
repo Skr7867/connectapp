@@ -28,7 +28,6 @@ class MyAvatarCollectionScreen extends StatelessWidget {
       ),
       body: Container(
         color: Theme.of(context).scaffoldBackgroundColor,
-        padding: const EdgeInsets.all(12),
         child: Obx(() {
           if (controller.isLoading.value) {
             return Center(
@@ -95,7 +94,7 @@ class MyAvatarCollectionScreen extends StatelessWidget {
               crossAxisCount: 2,
               mainAxisSpacing: 12,
               crossAxisSpacing: 12,
-              childAspectRatio: 0.59,
+              childAspectRatio: 0.57,
             ),
             itemCount: collections.length,
             itemBuilder: (context, index) {
