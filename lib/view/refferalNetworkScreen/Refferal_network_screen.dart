@@ -23,7 +23,7 @@ class ReferralNetworkScreen extends StatelessWidget {
     // Orientation orientation = MediaQuery.of(context).orientation;
     return Scaffold(
       appBar: CustomAppBar(
-        title: 'Your Refferals',
+        title: 'Your Referrals',
         automaticallyImplyLeading: true,
       ),
       body: Obx(() {
