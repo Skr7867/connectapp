@@ -31,10 +31,10 @@ class PlanPurchaseController extends GetxController {
       // Fetch the user data to get the token
       final user = await _userPrefs.getUser();
       if (user == null) {
-        Utils.snackBar(
-          "Authentication Error",
-          "No user token found. Please log in again.",
-        );
+        // Utils.snackBar(
+        //   "Authentication Error",
+        //   "No user token found. Please log in again.",
+        // );
         return;
       }
       // log('Attempting to purchase plan: $planId with token: ${user.token}');
@@ -55,8 +55,8 @@ class PlanPurchaseController extends GetxController {
         final responseData = jsonDecode(response.body);
         if (responseData['success'] == true || responseData['status'] == 200) {
           Utils.snackBar(
-            "Success",
             "Plan purchased successfully.",
+            "Success",
           );
           purchasedPlans.add(planId);
           userCoinsController.userList();

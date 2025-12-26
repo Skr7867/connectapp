@@ -52,7 +52,8 @@ class ClipPlayController extends GetxController with WidgetsBindingObserver {
       videoPlayerController.value!.play();
       update();
     }).catchError((error) {
-      Get.snackbar("Error", "Failed to load video: $error");
+      // Get.snackbar("Error", "Failed to load video: $error");
+      log(error.toString());
     });
   }
 

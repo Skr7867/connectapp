@@ -428,11 +428,18 @@ class NewCourseDesignScreen extends StatelessWidget {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
+                            // Text(
+                            //   enrolledCourseController.error.value.isEmpty
+                            //       ? 'An error occurred'
+                            //       : enrolledCourseController.error.value,
+                            //   style: const TextStyle(color: Colors.red),
+                            // ),
+
                             Text(
-                              enrolledCourseController.error.value.isEmpty
-                                  ? 'An error occurred'
-                                  : enrolledCourseController.error.value,
-                              style: const TextStyle(color: Colors.red),
+                              'Failed to load courses',
+                              style: const TextStyle(
+                                  color: Colors.red,
+                                  fontFamily: AppFonts.opensansRegular),
                             ),
                             const SizedBox(height: 16),
                             ElevatedButton(
@@ -1233,7 +1240,12 @@ class NewCourseDesignScreen extends StatelessWidget {
                             .errorMessage.isNotEmpty) {
                           return Center(
                             child: Text(
-                                topCreatorCoursesController.errorMessage.value),
+                              'Failed to load course',
+                              style: TextStyle(
+                                  fontFamily: AppFonts.opensansRegular,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.redColor),
+                            ),
                           );
                         }
 
@@ -1711,7 +1723,8 @@ class FeatureItem extends StatelessWidget {
   final String title;
   final String subtitle;
 
-  const FeatureItem({super.key, 
+  const FeatureItem({
+    super.key,
     required this.icon,
     required this.iconColor,
     required this.title,
