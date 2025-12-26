@@ -392,8 +392,8 @@ class _ChatScreenState extends State<ChatScreen>
 
       if (participant != null) {
         mentions.add({
-          'userId': participant.userId.id, // ✅ Use userId.id
-          'userName': participant.userId.username, // ✅ Use userId.fullName
+          'userId': participant.userId.id,
+          'userName': participant.userId.username,
           'startIndex': atIndex,
           'endIndex': endIndex,
         });
@@ -3031,8 +3031,7 @@ class _ChatScreenState extends State<ChatScreen>
                                     ),
                                     border: Border(
                                       left: BorderSide(
-                                        color:
-                                            isMe ? Colors.blue : Colors.white,
+                                        color: isMe ? Colors.blue : Colors.grey,
                                         width: 3,
                                       ),
                                     ),
@@ -3056,7 +3055,7 @@ class _ChatScreenState extends State<ChatScreen>
                                       const SizedBox(height: 2),
                                       // Use the same preview logic for consistency
                                       _buildReplyContentPreview(
-                                          message.replyTo!),
+                                          message.replyTo!, isMe),
                                     ],
                                   ),
                                 ),
@@ -3317,7 +3316,7 @@ class _ChatScreenState extends State<ChatScreen>
     );
   }
 
-  Widget _buildReplyContentPreview(ReplyTo replyTo) {
+  Widget _buildReplyContentPreview(ReplyTo replyTo, isMe) {
     // Extract content and type from replyTo
     final content = replyTo.content ?? '';
     final senderName = replyTo.sender?.name ?? 'Unknown';
@@ -3381,9 +3380,9 @@ class _ChatScreenState extends State<ChatScreen>
       return Text(
         content,
         style: TextStyle(
-          fontSize: 11,
-          color: Colors.grey,
-        ),
+            fontSize: 11,
+            color: isMe ? Colors.grey : Colors.white,
+            fontFamily: AppFonts.opensansRegular),
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
       );
@@ -7678,160 +7677,6 @@ class _ChatScreenState extends State<ChatScreen>
     );
   }
 
-  // void _sendMessage() {
-  //   if (selectedChatId == null ||
-  //       _messageController.text.trim().isEmpty ||
-  //       currentUserId == null) {
-  //     return;
-  //   }
-
-  //   final tempMessageId = 'temp-${DateTime.now().millisecondsSinceEpoch}';
-  //   final chat = selectedChat;
-  //   final isGroup = chat?.isGroup ?? false;
-  //   String? receiverId;
-
-  //   _recentlySentMessages.add(tempMessageId);
-
-  //   Timer(const Duration(seconds: 3), () {
-  //     _recentlySentMessages.remove(tempMessageId);
-  //     setState(() {});
-  //   });
-
-  //   if (isGroup) {
-  //     receiverId = null;
-  //   } else {
-  //     if (pendingPrivateChatUserId != null) {
-  //       receiverId = pendingPrivateChatUserId;
-  //       otherId = receiverId ?? '';
-  //     } else {
-  //       final otherParticipant = chat?.participants?.firstWhere(
-  //         (p) => p.id != currentUserId,
-  //         orElse: () => null as Participant,
-  //       );
-  //       receiverId = otherParticipant?.id;
-  //       otherId = receiverId ?? '';
-  //     }
-  //   }
-
-  //   final messageContent = _messageController.text;
-  //   String formattedContent = _applyFormatting(messageContent);
-
-  //   // Extract mentions from the message
-  //   final mentions = isGroup ? _extractMentionsFromText(formattedContent) : [];
-
-  //   final replyToMessageId = replyingToMessage?.id;
-  //   final isReplying = showReplyPreview && replyingToMessage != null;
-
-  //   final newMessage = Message(
-  //     id: tempMessageId,
-  //     content: formattedContent,
-  //     timestamp: DateTime.now(),
-  //     sender: Sender(
-  //       id: currentUserId!,
-  //       name: currentUserName ?? 'Me',
-  //       avatar: currentUserAvatar,
-  //     ),
-  //     isRead: false,
-  //     replyTo: isReplying
-  //         ? ReplyTo(
-  //             id: replyingToMessage!.id,
-  //             content: replyingToMessage!.content,
-  //             sender: replyingToMessage!.sender,
-  //           )
-  //         : null,
-  //     // mentions: mentions, // Add this if your Message model supports it
-  //   );
-
-  //   setState(() {
-  //     messages[selectedChatId!] = [
-  //       ...(messages[selectedChatId!] ?? []),
-  //       newMessage
-  //     ];
-  //     _showScrollToBottom = false;
-  //     _mentionsInMessage.clear(); // Clear mentions list
-  //   });
-
-  //   _messageController.clear();
-  //   setState(() {
-  //     _isBold = false;
-  //     _isItalic = false;
-  //     _isUnderline = false;
-  //     _showMentionSheet = false; // Close mention sheet
-  //     _currentMentionQuery = '';
-  //     _filteredMentions = [];
-  //   });
-
-  //   _cancelReply();
-
-  //   WidgetsBinding.instance.addPostFrameCallback((_) {
-  //     _scrollToBottom();
-  //   });
-
-  //   log('📤 Sending message with temp ID: $tempMessageId');
-
-  //   _socketService.sendMessage(
-  //     senderId: currentUserId!,
-  //     receiverId: isGroup ? null : receiverId,
-  //     groupId: isGroup ? selectedChatId : null,
-  //     content: formattedContent,
-  //     replyToMessageId: isReplying ? replyToMessageId : null,
-  //     mentions: mentions.map((m) => m['userId'] as String).toList(),
-  //     callback: (response) {
-  //       _recentlySentMessages.remove(tempMessageId);
-
-  //       final success = response['success'] ?? false;
-  //       final messageId = response['messageId'];
-
-  //       if (success && messageId != null) {
-  //         final realMessageId = messageId.toString();
-
-  //         log('✅ Message sent successfully: $tempMessageId -> $realMessageId');
-
-  //         setState(() {
-  //           final chatMessages = messages[selectedChatId!] ?? [];
-  //           final tempIndex =
-  //               chatMessages.indexWhere((msg) => msg.id == tempMessageId);
-
-  //           if (tempIndex != -1) {
-  //             final updatedMessage = Message(
-  //               id: realMessageId,
-  //               content: chatMessages[tempIndex].content,
-  //               timestamp: chatMessages[tempIndex].timestamp,
-  //               sender: chatMessages[tempIndex].sender,
-  //               isRead: chatMessages[tempIndex].isRead,
-  //               messageType: chatMessages[tempIndex].messageType,
-  //               replyTo: chatMessages[tempIndex].replyTo,
-  //               reactions: chatMessages[tempIndex].reactions,
-  //             );
-
-  //             chatMessages[tempIndex] = updatedMessage;
-
-  //             if (_messageKeys.containsKey(tempMessageId)) {
-  //               final key = _messageKeys.remove(tempMessageId);
-  //               if (key != null) {
-  //                 _messageKeys[realMessageId] = key;
-  //               }
-  //             }
-
-  //             messages[selectedChatId!] = List<Message>.from(chatMessages);
-  //           }
-  //         });
-
-  //         log('✅ Message ID updated in UI: $tempMessageId -> $realMessageId');
-  //       } else {
-  //         log('❌ Message send failed: ${response['message']}');
-
-  //         setState(() {
-  //           final chatMessages = messages[selectedChatId!] ?? [];
-  //           messages[selectedChatId!] =
-  //               chatMessages.where((msg) => msg.id != tempMessageId).toList();
-  //         });
-  //         _showSnackBar(
-  //             'Failed to send message: ${response['message'] ?? 'Unknown error'}');
-  //       }
-  //     },
-  //   );
-  // }
   void _sendMessage() {
     if (selectedChatId == null ||
         _messageController.text.trim().isEmpty ||
