@@ -8635,121 +8635,324 @@ class _ChatScreenState extends State<ChatScreen>
     );
   }
 
+  // Widget _buildLastMessageSubtitle(Chat chat) {
+  //   final chatMessages = messages[chat.id];
+
+  //   final dynamic localLastMessage =
+  //       (chatMessages?.isNotEmpty == true) ? chatMessages!.last : null;
+
+  //   final dynamic serverLastMessage = chat.lastMessage;
+
+  //   // Determine which message to use
+  //   final dynamic messageData =
+  //       (localLastMessage != null) ? localLastMessage : serverLastMessage;
+
+  //   String messageText = '';
+
+  //   if (messageData != null) {
+  //     // Check if it's a Message object (from local messages)
+  //     if (messageData is Message) {
+  //       final messageType = messageData.messageType ?? 'text';
+
+  //       if (messageType == 'sticker') {
+  //         messageText = '📷 Sent sticker';
+  //       } else if (messageType == 'video') {
+  //         messageText = '🎥 Sent Video';
+  //       } else if (messageType == 'audio') {
+  //         messageText = '🎤Sent Audio';
+  //       } else if (messageType == 'file') {
+  //         messageText = '📎 Sent File';
+  //       } else {
+  //         messageText = messageData.content;
+  //       }
+  //     }
+  //     // Check if it's a Map (from server/chat object)
+  //     else if (messageData is Map<String, dynamic>) {
+  //       final messageType = messageData['messageType'];
+
+  //       if (messageType == 'sticker') {
+  //         messageText = '📷 Sticker';
+  //       } else if (messageType == 'video') {
+  //         messageText = '🎥 Video';
+  //       } else if (messageType == 'audio') {
+  //         messageText = '🎤 Audio';
+  //       } else if (messageType == 'file') {
+  //         messageText = '📎 File';
+  //       } else {
+  //         // Default to text content
+  //         messageText = (messageData['text'] ??
+  //                 messageData['content'] ??
+  //                 messageData['message'] ??
+  //                 '')
+  //             .toString();
+  //       }
+  //     }
+  //     // Check if it's a plain string
+  //     else if (messageData is String) {
+  //       messageText = messageData;
+  //     }
+  //     // Fallback for other types
+  //     else {
+  //       try {
+  //         messageText = messageData.toString();
+  //       } catch (_) {
+  //         messageText = 'Unsupported message type';
+  //       }
+  //     }
+  //   }
+
+  //   // Check for reply icon
+  //   bool hasReply = false;
+  //   if (localLastMessage != null) {
+  //     if (localLastMessage is Message) {
+  //       hasReply = localLastMessage.replyTo != null;
+  //     } else {
+  //       try {
+  //         final dynamic dyn = localLastMessage as dynamic;
+  //         hasReply = dyn.replyTo != null;
+  //       } catch (_) {
+  //         hasReply = false;
+  //       }
+  //     }
+  //   } else if (serverLastMessage is Map<String, dynamic>) {
+  //     hasReply = serverLastMessage['replyTo'] != null;
+  //   }
+
+  //   // Check for reaction count
+  //   int reactionCount = 0;
+  //   if (localLastMessage != null) {
+  //     if (localLastMessage is Message) {
+  //       reactionCount = localLastMessage.reactions?.length ?? 0;
+  //     } else {
+  //       try {
+  //         final dynamic dyn = localLastMessage as dynamic;
+  //         final dynamic reactions = dyn.reactions;
+  //         if (reactions is List) reactionCount = reactions.length;
+  //       } catch (_) {
+  //         reactionCount = 0;
+  //       }
+  //     }
+  //   } else if (serverLastMessage is Map<String, dynamic>) {
+  //     final dynamic reactions = serverLastMessage['reactions'];
+  //     if (reactions is List) reactionCount = reactions.length;
+  //   }
+
+  //   final List<Widget> subtitleWidgets = [];
+
+  //   // Add reply icon if message is a reply
+  //   if (hasReply) {
+  //     subtitleWidgets
+  //         .add(const Icon(Icons.reply, size: 14, color: Colors.grey));
+  //     subtitleWidgets.add(const SizedBox(width: 4));
+  //   }
+
+  //   // Add message text (without sender name)
+  //   subtitleWidgets.add(
+  //     Expanded(
+  //       child: Text(
+  //         messageText.isEmpty ? '' : messageText,
+  //         maxLines: 1,
+  //         overflow: TextOverflow.ellipsis,
+  //         style: TextStyle(
+  //           color: messageText.isEmpty ? Colors.grey : AppColors.textColor,
+  //           fontFamily: AppFonts.opensansRegular,
+  //           fontSize: 14,
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  //   return Row(children: subtitleWidgets);
+  // }
   Widget _buildLastMessageSubtitle(Chat chat) {
-    final chatMessages = messages[chat.id];
-
-    final dynamic localLastMessage =
-        (chatMessages?.isNotEmpty == true) ? chatMessages!.last : null;
-
-    final dynamic serverLastMessage = chat.lastMessage;
-
-    // Determine which message to use
-    final dynamic messageData =
-        (localLastMessage != null) ? localLastMessage : serverLastMessage;
+    final unreadController = Get.find<UnreadCountController>();
+    final groupUnreadController = Get.find<GroupUnreadCountController>();
 
     String messageText = '';
+    String? messageType;
 
-    if (messageData != null) {
-      // Check if it's a Message object (from local messages)
-      if (messageData is Message) {
-        final messageType = messageData.messageType ?? 'text';
+    // Get last message from appropriate controller
+    if (chat.isGroup) {
+      final groupUnreadItem = groupUnreadController.unreadGroupList.firstWhere(
+        (g) => g.id == chat.id,
+        orElse: () => GroupUnreadCountModel(id: chat.id, unreadCount: 0),
+      );
 
-        if (messageType == 'sticker') {
-          messageText = '📷 Sent sticker';
-        } else if (messageType == 'video') {
-          messageText = '🎥 Sent Video';
-        } else if (messageType == 'audio') {
-          messageText = '🎤Sent Audio';
-        } else if (messageType == 'file') {
-          messageText = '📎 Sent File';
-        } else {
-          messageText = messageData.content;
-        }
+      if (groupUnreadItem.lastMessage != null) {
+        final lastMsg = groupUnreadItem.lastMessage!;
+        messageText = lastMsg.text ?? '';
+        messageType = _detectMessageType(messageText);
       }
-      // Check if it's a Map (from server/chat object)
-      else if (messageData is Map<String, dynamic>) {
-        final messageType = messageData['messageType'];
+    } else {
+      final unreadItem = unreadController.unreadCountList.firstWhere(
+        (u) => u.sId == chat.id,
+        orElse: () => UnreadCountModel(sId: chat.id, unreadCount: 0),
+      );
 
-        if (messageType == 'sticker') {
-          messageText = '📷 Sticker';
-        } else if (messageType == 'video') {
-          messageText = '🎥 Video';
-        } else if (messageType == 'audio') {
-          messageText = '🎤 Audio';
-        } else if (messageType == 'file') {
-          messageText = '📎 File';
-        } else {
-          // Default to text content
-          messageText = (messageData['text'] ??
-                  messageData['content'] ??
-                  messageData['message'] ??
-                  '')
-              .toString();
-        }
-      }
-      // Check if it's a plain string
-      else if (messageData is String) {
-        messageText = messageData;
-      }
-      // Fallback for other types
-      else {
-        try {
-          messageText = messageData.toString();
-        } catch (_) {
-          messageText = 'Unsupported message type';
-        }
+      if (unreadItem.lastMessage != null) {
+        final lastMsg = unreadItem.lastMessage!;
+        messageText = lastMsg.text ?? '';
+        messageType = _detectMessageType(messageText);
       }
     }
 
-    // Check for reply icon
-    bool hasReply = false;
-    if (localLastMessage != null) {
-      if (localLastMessage is Message) {
-        hasReply = localLastMessage.replyTo != null;
-      } else {
-        try {
-          final dynamic dyn = localLastMessage as dynamic;
-          hasReply = dyn.replyTo != null;
-        } catch (_) {
-          hasReply = false;
-        }
-      }
-    } else if (serverLastMessage is Map<String, dynamic>) {
-      hasReply = serverLastMessage['replyTo'] != null;
+    // Fallback to local messages if server data is not available
+    final chatMessages = messages[chat.id];
+    if (messageText.isEmpty && chatMessages?.isNotEmpty == true) {
+      final localLastMessage = chatMessages!.last;
+      messageText = localLastMessage.content;
+      messageType =
+          localLastMessage.messageType ?? _detectMessageType(messageText);
     }
 
-    // Check for reaction count
-    int reactionCount = 0;
-    if (localLastMessage != null) {
-      if (localLastMessage is Message) {
-        reactionCount = localLastMessage.reactions?.length ?? 0;
-      } else {
-        try {
-          final dynamic dyn = localLastMessage as dynamic;
-          final dynamic reactions = dyn.reactions;
-          if (reactions is List) reactionCount = reactions.length;
-        } catch (_) {
-          reactionCount = 0;
-        }
-      }
-    } else if (serverLastMessage is Map<String, dynamic>) {
-      final dynamic reactions = serverLastMessage['reactions'];
-      if (reactions is List) reactionCount = reactions.length;
+    // Display appropriate icon/text based on message type
+    return Row(
+      children: [
+        // Add reply icon if needed (keep existing logic)
+        Expanded(
+          child: _buildMessageTypeDisplay(messageType, messageText),
+        ),
+      ],
+    );
+  }
+
+// Helper method to detect message type from URL
+  String? _detectMessageType(String content) {
+    if (content.isEmpty) return 'text';
+
+    final lowerContent = content.toLowerCase();
+
+    // Check for image extensions
+    if (lowerContent.contains('.jpg') ||
+        lowerContent.contains('.jpeg') ||
+        lowerContent.contains('.png') ||
+        lowerContent.contains('.gif') ||
+        lowerContent.contains('.webp')) {
+      return 'image';
     }
 
-    final List<Widget> subtitleWidgets = [];
-
-    // Add reply icon if message is a reply
-    if (hasReply) {
-      subtitleWidgets
-          .add(const Icon(Icons.reply, size: 14, color: Colors.grey));
-      subtitleWidgets.add(const SizedBox(width: 4));
+    // Check for video extensions
+    if (lowerContent.contains('.mp4') ||
+        lowerContent.contains('.mov') ||
+        lowerContent.contains('.avi') ||
+        lowerContent.contains('.mkv') ||
+        lowerContent.contains('.webm')) {
+      return 'video';
     }
 
-    // Add message text (without sender name)
-    subtitleWidgets.add(
-      Expanded(
-        child: Text(
+    // Check for audio extensions
+    if (lowerContent.contains('.mp3') ||
+        lowerContent.contains('.wav') ||
+        lowerContent.contains('.aac') ||
+        lowerContent.contains('.m4a') ||
+        lowerContent.contains('.ogg')) {
+      return 'audio';
+    }
+
+    // Check for document/PDF extensions
+    if (lowerContent.contains('.pdf') ||
+        lowerContent.contains('.doc') ||
+        lowerContent.contains('.docx') ||
+        lowerContent.contains('.xls') ||
+        lowerContent.contains('.xlsx') ||
+        lowerContent.contains('.txt')) {
+      return 'file';
+    }
+
+    // Check for sticker (assuming stickers have specific pattern in URL)
+    if (lowerContent.contains('sticker') || lowerContent.contains('flaticon')) {
+      return 'sticker';
+    }
+
+    // Default to text
+    return 'text';
+  }
+
+// Helper method to display message type with icon
+  Widget _buildMessageTypeDisplay(String? messageType, String messageText) {
+    switch (messageType) {
+      case 'image':
+        return Row(
+          children: [
+            Icon(Icons.image, size: 16, color: Colors.grey),
+            SizedBox(width: 4),
+            Text(
+              'sent a image',
+              style: TextStyle(
+                color: AppColors.textColor,
+                fontFamily: AppFonts.opensansRegular,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        );
+
+      case 'video':
+        return Row(
+          children: [
+            Icon(Icons.videocam, size: 16, color: Colors.grey),
+            SizedBox(width: 4),
+            Text(
+              'sent a video',
+              style: TextStyle(
+                color: AppColors.textColor,
+                fontFamily: AppFonts.opensansRegular,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        );
+
+      case 'audio':
+        return Row(
+          children: [
+            Icon(Icons.audiotrack, size: 16, color: Colors.grey),
+            SizedBox(width: 4),
+            Text(
+              'sent a audio',
+              style: TextStyle(
+                color: AppColors.textColor,
+                fontFamily: AppFonts.opensansRegular,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        );
+
+      case 'file':
+        return Row(
+          children: [
+            Icon(Icons.insert_drive_file, size: 16, color: Colors.grey),
+            SizedBox(width: 4),
+            Text(
+              'sent a document',
+              style: TextStyle(
+                color: AppColors.textColor,
+                fontFamily: AppFonts.opensansRegular,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        );
+
+      case 'sticker':
+        return Row(
+          children: [
+            Icon(Icons.emoji_emotions, size: 16, color: Colors.grey),
+            SizedBox(width: 4),
+            Text(
+              'sent a sticker',
+              style: TextStyle(
+                color: AppColors.textColor,
+                fontFamily: AppFonts.opensansRegular,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        );
+
+      case 'text':
+      default:
+        return Text(
           messageText.isEmpty ? '' : messageText,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -8758,10 +8961,8 @@ class _ChatScreenState extends State<ChatScreen>
             fontFamily: AppFonts.opensansRegular,
             fontSize: 14,
           ),
-        ),
-      ),
-    );
-    return Row(children: subtitleWidgets);
+        );
+    }
   }
 
   Widget _buildMessageInput() {
