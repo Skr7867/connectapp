@@ -8,7 +8,7 @@ class Chat {
   final String? avatar;
   final dynamic lastMessage;
   final DateTime timestamp;
-  // final int unread;
+
   final bool isGroup;
   final bool? isOnline;
   final String? senderName;
@@ -52,7 +52,6 @@ class Chat {
       'avatar': avatar,
       'lastMessage': lastMessage,
       'updatedAt': timestamp.toIso8601String(),
-      // 'unread': unread,
       'isGroup': isGroup,
       'participants': participants?.map((p) => p.toJson()).toList(),
       'pinnedMessages': 'pinnedMessages'
@@ -75,7 +74,6 @@ class Chat {
       avatar: avatar ?? this.avatar,
       lastMessage: lastMessage ?? this.lastMessage,
       timestamp: timestamp ?? this.timestamp,
-      // unread: unread ?? this.unread,
       isGroup: isGroup ?? this.isGroup,
       participants: participants ?? this.participants,
     );
@@ -106,7 +104,7 @@ class Reaction {
     } else if (json['user'] is Map<String, dynamic>) {
       final userData = json['user'] as Map<String, dynamic>;
 
-      // ✅ FIX: Handle avatar being just an ID string
+      //  FIX: Handle avatar being just an ID string
       String? avatarUrl;
       if (userData['avatar'] != null) {
         if (userData['avatar'] is String) {

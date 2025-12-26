@@ -4382,8 +4382,11 @@ class _ChatScreenState extends State<ChatScreen>
     );
     _generateInviteLink();
     _initializeChat();
-    _connectSocketFirst();
-    _setupSocketListeners();
+    // _connectSocketFirst();
+    _connectSocketFirst().then((_) {
+      // ✅ Setup listeners ONLY after connect
+      _setupSocketListeners();
+    });
     _socketService.messageHistoryStream.listen((data) {
       log("Handling messageHistory from stream");
       if (mounted) _handlePrivateMessageHistory(data);
@@ -4406,7 +4409,7 @@ class _ChatScreenState extends State<ChatScreen>
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _initializeChat();
-      await _connectSocketFirst();
+      // await _connectSocketFirst();
 
       if (notificationData != null &&
           notificationData['isfromnoticlick'] == true) {
@@ -6081,6 +6084,7 @@ class _ChatScreenState extends State<ChatScreen>
 
 // Enhanced message receiving handler
   void _handleReceiveMessage(Map<String, dynamic> serverMessage) {
+    log('Kya ye function chal raha hai ');
     final isGroupMessage = serverMessage['group'] != null;
     final chatId =
         isGroupMessage ? serverMessage['group'] : serverMessage['chat'];
@@ -6562,7 +6566,6 @@ class _ChatScreenState extends State<ChatScreen>
     await _localFileManager.updateCurrentUserId(chatId);
 
     // ✅ Store current scroll position before loading
-    double? previousScrollPosition = null;
     bool wasAtBottom = _isUserAtBottom;
 
     // ✅ Reset all loading states
@@ -6588,6 +6591,7 @@ class _ChatScreenState extends State<ChatScreen>
 
       // ✅ Load messages based on chat type
       if (chat.isGroup) {
+        _joinGroup(chatId, currentUserId!, chatId);
         _socketService.loadOlderGroupMessages(
           groupId: chatId,
           onResponse: (data) {
@@ -6597,6 +6601,8 @@ class _ChatScreenState extends State<ChatScreen>
           },
         );
       } else {
+        _joinPrivateChat(chatId);
+
         final otherParticipant = chat.participants?.firstWhereOrNull(
           (p) => p.id != currentUserId,
         );
@@ -6777,10 +6783,10 @@ class _ChatScreenState extends State<ChatScreen>
     }
 
     //  Prevent duplicate join calls (WhatsApp-like behavior)
-    if (messages.containsKey(chatId)) {
-      log("🟢 Already loaded this chat ($chatId), skipping joinPrivateRoom");
-      return;
-    }
+    // if (messages.containsKey(chatId)) {
+    //   log("🟢 Already loaded this chat ($chatId), skipping joinPrivateRoom");
+    //   return;
+    // }
 
     if (currentUserId == null) return;
 
@@ -6790,12 +6796,18 @@ class _ChatScreenState extends State<ChatScreen>
       currentUserId!,
       otherParticipant.id,
       (response) {
+        log("✅ Joined private room: $response");
         if (response['success'] == true) {
           log(" Private room joined for chatId: $chatId");
-
           setState(() {
             // you don't need to store anything here
           });
+
+          _socketService.chatOpened(
+            chatId: chatId,
+            userId: currentUserId!,
+            isGroup: false,
+          );
         } else {
           _showSnackBar('Failed to load chat history');
         }
