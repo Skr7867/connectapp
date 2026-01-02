@@ -1,7 +1,7 @@
 class ApiUrls {
-  // static const String baseUrl = 'https://connectapp.cc';
+  static const String baseUrl = 'https://api.connectapp.cc';
 
-  static const String baseUrl = 'https://connect-backend-qn87.onrender.com';
+  // static const String baseUrl = 'https://connect-backend-qn87.onrender.com';
 
   static const String signupApi = '$baseUrl/connect/v1/api/user/register';
 
