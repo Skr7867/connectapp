@@ -74,5 +74,6 @@ class Media {
   }
 
   @override
-  String toString() => 'Media(id: $id, content: $content, createdAt: $createdAt)';
+  String toString() =>
+      'Media(id: $id, content: $content, createdAt: $createdAt)';
 }

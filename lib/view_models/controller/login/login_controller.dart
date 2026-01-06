@@ -11,9 +11,9 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../models/UserLogin/user_login_model.dart';
-import '../../../models/UserProfile/user_profile_model.dart';
 import '../../../repository/UserLogin/user_login_repository.dart';
 import '../../../res/routes/routes_name.dart';
+import '../profile/user_profile_controller.dart';
 
 class LoginController extends GetxController {
   final emailController = TextEditingController().obs;
@@ -157,41 +157,24 @@ class LoginController extends GetxController {
 
   Future<void> handleSuccessfulLogin(LoginResponseModel loginResponse) async {
     await _userPreferencesViewmodel.saveUser(loginResponse);
+
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('userToken', loginResponse.token);
 
-    try {
-      final profileResponse = await http.get(
-        Uri.parse('${ApiUrls.baseUrl}/connect/v1/api/user/profile'),
-        headers: {'Authorization': 'Bearer ${loginResponse.token}'},
-      );
+    // ✅ CREATE CONTROLLER HERE (AFTER TOKEN IS READY)
+    final userProfileController =
+        Get.put(UserProfileController(), permanent: true);
 
-      if (profileResponse.statusCode == 200) {
-        final jsonResponse = jsonDecode(profileResponse.body);
-        final userProfile = UserProfileModel.fromJson(jsonResponse);
+    // ✅ FORCE FETCH PROFILE ONCE
+    await userProfileController.refreshApi();
 
-        // Save profile
-        await _userPreferencesViewmodel.saveUserProfile(userProfile);
-
-        // Role check and navigation
-        final role = jsonResponse['role'];
-        if (role == 'Creator') {
-          Get.offAllNamed(RouteName.creatorBottomBar);
-        } else {
-          Get.offAllNamed(RouteName.bottomNavbar);
-        }
-
-        await prefs.setString('userRole', role);
-      } else {
-        // log('Failed to fetch profile: ${profileResponse.statusCode}');
-        Utils.snackBar(
-            'Logged in, but failed to fetch profile data', 'Warning');
-      }
-    } catch (e) {
-      // log('Error fetching profile: $e');
+    // Navigate
+    final role = loginResponse.user.role;
+    if (role == 'Creator') {
+      Get.offAllNamed(RouteName.creatorBottomBar);
+    } else {
+      Get.offAllNamed(RouteName.bottomNavbar);
     }
-
-    Utils.snackBar(loginResponse.message, 'Success');
 
     Get.delete<LoginController>();
   }

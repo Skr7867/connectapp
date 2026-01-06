@@ -26,23 +26,19 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen>
-    with AutomaticKeepAliveClientMixin {
+class _HomeScreenState extends State<HomeScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  final userData = Get.put(UserProfileController(), permanent: true);
-  final userLeaderboardData = Get.put(UserLeaderboardController());
-  final NotificationController controller = Get.find<NotificationController>();
+  final UserProfileController userData = Get.find<UserProfileController>();
 
-  @override
-  bool get wantKeepAlive => true;
+  final userLeaderboardData = Get.put(UserLeaderboardController());
+  final NotificationController controller = Get.put(NotificationController());
 
   Future<void> onRefresh() async {
-    await userData.refreshApi(); // manual refresh updates both local + UI
+    await userData.refreshApi();
   }
 
   @override
   Widget build(BuildContext context) {
-    super.build(context);
     final size = MediaQuery.of(context).size;
     final orientation = MediaQuery.of(context).orientation;
     final isPortrait = orientation == Orientation.portrait;
@@ -197,7 +193,8 @@ class _HomeScreenState extends State<HomeScreen>
 
   Widget _buildProfileAvatar(BuildContext context) {
     return Obx(() {
-      final imageUrl = userData.userList.value.avatar?.imageUrl;
+      final user = userData.userList.value;
+      final imageUrl = user.avatar?.imageUrl ?? '';
       final hasData = userData.rxRequestStatus.value == Status.COMPLETED;
 
       return GestureDetector(
@@ -210,25 +207,16 @@ class _HomeScreenState extends State<HomeScreen>
             border: Border.all(color: AppColors.blackColor, width: 2),
           ),
           child: ClipOval(
-            child: hasData && imageUrl?.isNotEmpty == true
+            child: hasData && imageUrl.isNotEmpty
                 ? CachedNetworkImage(
-                    imageUrl: imageUrl!,
+                    imageUrl: imageUrl,
                     fit: BoxFit.cover,
-                    placeholder: (_, __) => Image.asset(
-                      ImageAssets.defaultProfileImg,
-                      fit: BoxFit.cover,
-                    ),
-                    errorWidget: (_, __, ___) => Image.asset(
-                      ImageAssets.defaultProfileImg,
-                      fit: BoxFit.cover,
-                    ),
-                    memCacheWidth: 90,
-                    memCacheHeight: 90,
+                    placeholder: (_, __) =>
+                        Image.asset(ImageAssets.defaultProfileImg),
+                    errorWidget: (_, __, ___) =>
+                        Image.asset(ImageAssets.defaultProfileImg),
                   )
-                : Image.asset(
-                    ImageAssets.defaultProfileImg,
-                    fit: BoxFit.cover,
-                  ),
+                : Image.asset(ImageAssets.defaultProfileImg),
           ),
         ),
       );
@@ -240,12 +228,17 @@ class _HomeScreenState extends State<HomeScreen>
       final status = userData.rxRequestStatus.value;
       final fullName = userData.userList.value.fullName ?? '';
 
+      // Show loading only when we truly have no data
       if (status == Status.LOADING && fullName.isEmpty) {
-        return SizedBox(
-          width: 2,
-          height: 20,
-          child: CircularProgressIndicator(
-            color: Theme.of(context).scaffoldBackgroundColor,
+        return const SizedBox(
+          width: 100,
+          child: Text(
+            'Loading...',
+            style: TextStyle(
+              fontFamily: AppFonts.helveticaMedium,
+              fontSize: 16,
+              color: Colors.grey,
+            ),
           ),
         );
       }
@@ -253,8 +246,8 @@ class _HomeScreenState extends State<HomeScreen>
       return Text(
         fullName.isEmpty ? 'User' : fullName,
         style: TextStyle(
-          fontFamily: AppFonts.helveticaMedium,
-          fontSize: 18,
+          fontFamily: AppFonts.opensansRegular,
+          fontSize: 14,
           fontWeight: FontWeight.bold,
           color: Theme.of(context).textTheme.bodyLarge?.color,
         ),
@@ -271,7 +264,6 @@ class _HomeScreenState extends State<HomeScreen>
                   Icons.notifications,
                   color: Theme.of(context).textTheme.bodyLarge?.color,
                 ),
-                // onPressed: () => Get.toNamed(RouteName.notificationScreen),
                 onPressed: () {
                   Future.microtask(() {
                     Get.toNamed(RouteName.notificationScreen,
@@ -376,12 +368,19 @@ class _HomeScreenState extends State<HomeScreen>
       final level = userData.userList.value.level ?? 0;
       final xp = userData.userList.value.xp ?? 0;
 
-      if (status == Status.LOADING && level == 0) {
-        return const Row(
+      // Only show loading when we truly have no data
+      if (status == Status.LOADING && level == 0 && xp == 0) {
+        return Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Loading...', style: TextStyle(fontSize: 13)),
-            SizedBox(
+            const Text(
+              'Loading progress...',
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(
               width: 16,
               height: 16,
               child: CircularProgressIndicator(strokeWidth: 2),

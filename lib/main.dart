@@ -61,10 +61,10 @@ Future<void> main() async {
 
   Get.put(NotificationController(), permanent: true);
   Get.put(RepostClipController(), permanent: true);
+  Get.put(UserProfileController(), permanent: true);
   Get.put(UserAvatarController(), permanent: true);
   Get.put(LanguageController(), permanent: true);
   Get.put(ThemeController(), permanent: true);
-  Get.put(UserProfileController(), permanent: true);
   Get.put(UserLeaderboardController(), permanent: true);
   Get.put(UnreadCountController(), permanent: true);
   Get.put(GroupUnreadCountController(), permanent: true);
@@ -139,7 +139,6 @@ class _MyAppState extends State<MyApp> {
       if (Myconst.publicKey.isNotEmpty) {
         Stripe.publishableKey = Myconst.publicKey;
         await Stripe.instance.applySettings();
-        log("Stripe key = ${Myconst.publicKey}");
       } else {
         log("❌ Stripe publishable key is EMPTY in release");
       }

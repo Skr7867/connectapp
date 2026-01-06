@@ -70,7 +70,7 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   final Map<String, String> _translatedMessages = {};
   final Set<String> _translatingMessages = {};
   bool _autoTranslate = false;
@@ -4365,6 +4365,7 @@ class _ChatScreenState extends State<ChatScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     Get.put(UnreadCountController());
     Get.put(GroupUnreadCountController());
     _scrollController.addListener(() {
@@ -4523,6 +4524,7 @@ class _ChatScreenState extends State<ChatScreen>
   void dispose() {
     //  _olderPrivateMessagesSubscription?.cancel();
     // _olderGroupMessagesSubscription?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     ChatOpenTracker.currentChatId = null;
     adminAddedSubscription?.cancel();
     _pinnedMessageSubscription.cancel();
@@ -4541,6 +4543,30 @@ class _ChatScreenState extends State<ChatScreen>
     _unpinnedMessageSubscription.cancel();
     _messageDeletedSubscription?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Verify current user hasn't changed
+      _verifyCurrentUser();
+    }
+  }
+
+  Future<void> _verifyCurrentUser() async {
+    final userData = await _userPreferences.getUser();
+    final newUserId = userData?.user.id;
+
+    if (newUserId != currentUserId) {
+      // User changed, reinitialize
+      setState(() {
+        currentUserId = newUserId;
+        messages.clear();
+        groups.clear();
+        directChats.clear();
+      });
+      await _initializeChat();
+    }
   }
 
   Future<void> _loadUserProfile() async {
@@ -5381,8 +5407,8 @@ class _ChatScreenState extends State<ChatScreen>
 
     if (selectedChatId == null) return;
 
-    log('🔄 Updating reactions for message: $messageIdToUpdate');
-    log('🔄 Updated message data: $updatedMessage');
+    // log('🔄 Updating reactions for message: $messageIdToUpdate');
+    // log('🔄 Updated message data: $updatedMessage');
 
     // ✅ FIXED: Update the message in ALL chats where it exists
     setState(() {
@@ -7797,8 +7823,6 @@ class _ChatScreenState extends State<ChatScreen>
 
         if (success && messageId != null) {
           final realMessageId = messageId.toString();
-
-          log('✅ Message sent successfully: $tempMessageId -> $realMessageId');
 
           setState(() {
             final chatMessages = messages[selectedChatId!] ?? [];

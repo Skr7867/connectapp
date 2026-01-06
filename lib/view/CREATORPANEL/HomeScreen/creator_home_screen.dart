@@ -259,13 +259,15 @@ class _CreatorHomeScreenState extends State<CreatorHomeScreen> {
                         ),
                       );
                     case Status.ERROR:
-                      return const Text("No Name");
+                      return const Text("User");
                     case Status.COMPLETED:
                       return Text(
-                        '${userData.userList.value.fullName}',
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                        '${userData.userList.value.fullName} ',
                         style: TextStyle(
                           fontFamily: AppFonts.helveticaMedium,
-                          fontSize: 20,
+                          fontSize: 14,
                           fontWeight: FontWeight.bold,
                           color: Theme.of(context).textTheme.bodyLarge?.color,
                         ),

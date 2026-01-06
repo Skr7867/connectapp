@@ -1240,11 +1240,14 @@ class NewCourseDesignScreen extends StatelessWidget {
                             .errorMessage.isNotEmpty) {
                           return Center(
                             child: Text(
-                              'Failed to load course',
+                              'No top course found this week ',
                               style: TextStyle(
                                   fontFamily: AppFonts.opensansRegular,
                                   fontWeight: FontWeight.bold,
-                                  color: AppColors.redColor),
+                                  color: Theme.of(context)
+                                      .textTheme
+                                      .bodyLarge
+                                      ?.color),
                             ),
                           );
                         }

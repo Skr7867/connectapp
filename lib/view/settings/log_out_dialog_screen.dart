@@ -6,7 +6,13 @@ import 'package:get/get.dart';
 import '../../../res/routes/routes_name.dart';
 import '../../res/color/app_colors.dart';
 import '../../res/fonts/app_fonts.dart';
+import '../../view_models/controller/groupUnreadCount/group_unread_count_controller.dart';
+import '../../view_models/controller/leaderboard/user_leaderboard_controller.dart';
 import '../../view_models/controller/logout/log_out_controller.dart';
+import '../../view_models/controller/navbar/bottom_bav_bar_controller.dart';
+import '../../view_models/controller/notification/notification_controller.dart';
+import '../../view_models/controller/profile/user_profile_controller.dart';
+import '../../view_models/controller/unreadCount/unread_count_controller.dart';
 
 void showLogoutDialog(BuildContext context) {
   double screenHeight = MediaQuery.of(context).size.height;
@@ -104,8 +110,38 @@ void showLogoutDialog(BuildContext context) {
 
 Future<void> _handleLogout(LogoutController logoutController) async {
   bool success = await logoutController.logout();
+
   if (success) {
-    log('Logout sucessfull');
+    log('Logout successful');
+
+    // 🧹 DELETE ALL USER-SCOPED CONTROLLERS
+    if (Get.isRegistered<UserProfileController>()) {
+      Get.delete<UserProfileController>(force: true);
+    }
+
+    if (Get.isRegistered<UserLeaderboardController>()) {
+      Get.delete<UserLeaderboardController>(force: true);
+    }
+
+    if (Get.isRegistered<NotificationController>()) {
+      Get.delete<NotificationController>(force: true);
+    }
+
+    // ADD THESE - Delete chat-related controllers
+    if (Get.isRegistered<UnreadCountController>()) {
+      Get.delete<UnreadCountController>(force: true);
+    }
+
+    if (Get.isRegistered<GroupUnreadCountController>()) {
+      Get.delete<GroupUnreadCountController>(force: true);
+    }
+
+    // Delete navbar controller to reset state
+    if (Get.isRegistered<NavbarController>()) {
+      Get.delete<NavbarController>(force: true);
+    }
+
+    // 🚪 Go to login with clean state
     Get.offAllNamed(RouteName.loginScreen);
   } else {
     Utils.snackBar(

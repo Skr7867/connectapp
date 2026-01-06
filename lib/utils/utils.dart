@@ -43,6 +43,7 @@ class Utils {
       snackPosition: SnackPosition.TOP,
       backgroundColor: title == 'Success' ? Colors.green : Colors.red,
       colorText: Colors.white,
+      duration: const Duration(seconds: 1),
     );
   }
 }

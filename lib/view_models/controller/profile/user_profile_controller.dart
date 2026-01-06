@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:developer';
+
 import 'package:connectapp/models/userProfile/user_profile_model.dart';
 import 'package:connectapp/repository/UserProfile/user_profile_repository.dart';
 import 'package:get/get.dart';
@@ -18,6 +20,11 @@ class UserProfileController extends GetxController {
   final error = ''.obs;
 
   final String _cacheKey = 'cached_user_profile';
+  bool get hasRealData {
+    return rxRequestStatus.value == Status.COMPLETED &&
+        userList.value.fullName != null &&
+        userList.value.fullName!.isNotEmpty;
+  }
 
   void setError(String value) => error.value = value;
   void setRxRequestStatus(Status value) => rxRequestStatus.value = value;
@@ -33,31 +40,29 @@ class UserProfileController extends GetxController {
     userMediaList.value = value.media;
   }
 
-  @override
-  void onInit() {
-    super.onInit();
-    _loadCachedData();
-    userListApi(firstLoad: true);
-  }
-
-  /// Load data from local storage
+  // Load cached data if available - but DON'T set status to COMPLETED
   void _loadCachedData() {
     final cachedData = _storage.read(_cacheKey);
     if (cachedData != null) {
       try {
-        final decoded = jsonDecode(cachedData);
-        final cachedUser = UserProfileModel.fromJson(decoded);
-        setUserList(cachedUser, saveLocal: false);
-        setRxRequestStatus(Status.COMPLETED);
+        final Map<String, dynamic> jsonData = jsonDecode(cachedData);
+        userList.value = UserProfileModel.fromJson(jsonData);
+        // Don't set status to COMPLETED here - let API call do that
+        log('Loaded cached user profile');
       } catch (e) {
-        print(" Failed to load cached user data: $e");
+        // Cache is corrupted, ignore and fetch fresh data
+        log('Cache load error: $e');
       }
     }
   }
 
-  Future<void> userListApi({bool firstLoad = false}) async {
-    if (!firstLoad && userList.value.fullName != null) return;
+  @override
+  void onInit() {
+    super.onInit();
+    _loadCachedData();
+  }
 
+  Future<void> userListApi({bool forceRefresh = false}) async {
     setRxRequestStatus(Status.LOADING);
     try {
       final loginData = await _prefs.getUser();
@@ -118,5 +123,14 @@ class UserProfileController extends GetxController {
       setError(e.toString());
       setRxRequestStatus(Status.ERROR);
     }
+  }
+
+  void clearUserData() {
+    userList.value = UserProfileModel();
+    userMediaList.clear();
+    rxRequestStatus.value = Status.LOADING;
+    error.value = '';
+    // Also clear cache
+    _storage.remove(_cacheKey);
   }
 }
