@@ -4596,9 +4596,6 @@ class _ChatScreenState extends State<ChatScreen>
     try {
       LoginResponseModel? userData = await _userPreferences.getUser();
 
-      // ❌ DO NOT CONNECT SOCKET HERE
-      // _socketService.connect(ApiUrls.baseUrl, token);
-
       await _fetchGroups();
       await _fetchPrivateChats();
 
@@ -6560,7 +6557,6 @@ class _ChatScreenState extends State<ChatScreen>
     final unreadController = Get.find<UnreadCountController>();
     final groupUnreadController = Get.find<GroupUnreadCountController>();
 
-    // ✅ Set this FIRST before any other operations
     ChatOpenTracker.currentChatId = chatId;
 
     final chat = allChats.firstWhereOrNull((c) => c.id == chatId);
@@ -6571,7 +6567,6 @@ class _ChatScreenState extends State<ChatScreen>
 
     _clearReplyState();
 
-    // ✅ Clear unread counts
     if (chat.isGroup) {
       groupUnreadController.clearUnread(chatId);
     } else {
@@ -6591,10 +6586,7 @@ class _ChatScreenState extends State<ChatScreen>
 
     await _localFileManager.updateCurrentUserId(chatId);
 
-    // ✅ Store current scroll position before loading
-    bool wasAtBottom = _isUserAtBottom;
-
-    // ✅ Reset all loading states
+    // ✅ Reset states BEFORE loading
     setState(() {
       selectedChatId = chatId;
       _showScrollToBottom = false;
@@ -6602,9 +6594,10 @@ class _ChatScreenState extends State<ChatScreen>
       _translatingMessages.clear();
       _translationError = null;
       showChatList = MediaQuery.of(context).size.width <= 600 ? false : true;
-      _isLoadingMessages = true; // Show loading indicator
+      _isLoadingMessages = true;
       _isLoadingOlderMessages = false;
       _hasShownUnreadSeparator = false;
+      _isUserAtBottom = true; // ✅ Set this to true initially
     });
 
     _cleanupMessageKeys();
@@ -6615,14 +6608,14 @@ class _ChatScreenState extends State<ChatScreen>
         markChatAsRead(chatId, currentUserId!);
       }
 
-      // ✅ Load messages based on chat type
       if (chat.isGroup) {
         _joinGroup(chatId, currentUserId!, chatId);
         _socketService.loadOlderGroupMessages(
           groupId: chatId,
           onResponse: (data) {
             if (mounted) {
-              _handleGroupMessagesLoaded(data, chatId, wasAtBottom);
+              _handleGroupMessagesLoaded(
+                  data, chatId, true); // Always pass true for wasAtBottom
             }
           },
         );
@@ -6639,7 +6632,8 @@ class _ChatScreenState extends State<ChatScreen>
             user2Id: otherParticipant.id,
             onResponse: (data) {
               if (mounted) {
-                _handlePrivateMessagesLoaded(data, chatId, wasAtBottom);
+                _handlePrivateMessagesLoaded(
+                    data, chatId, true); // Always pass true for wasAtBottom
               }
             },
           );
@@ -6660,9 +6654,7 @@ class _ChatScreenState extends State<ChatScreen>
 
       // Transform messages
       final transformedMessages = messagesList.map((msg) {
-        final message = Message.fromJson(msg);
-        // log('📨 Group Message ${message.id} has ${message.reactions?.length ?? 0} reactions');
-        return message;
+        return Message.fromJson(msg);
       }).toList();
 
       // Sort by timestamp (oldest to newest)
@@ -6673,54 +6665,21 @@ class _ChatScreenState extends State<ChatScreen>
           messages[groupId] = transformedMessages;
           selectedChatId = groupId;
           _isLoadingMessages = false;
+          _isUserAtBottom = true; // ✅ CRITICAL: Set this to true for groups
         });
 
-        // ✅ Scroll to bottom AFTER messages are loaded
+        // ✅ FIXED: Triple nested callbacks for groups (same as private)
         WidgetsBinding.instance.addPostFrameCallback((_) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            _scrollToLatestMessage(wasAtBottom: wasAtBottom);
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _scrollToBottom(force: true, isInitialLoad: true);
+            });
           });
         });
       }
     } else {
       setState(() => _isLoadingMessages = false);
     }
-  }
-
-  void _scrollToLatestMessage({bool wasAtBottom = true}) {
-    if (!_scrollController.hasClients) {
-      // Schedule for next frame
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _scrollToLatestMessage(wasAtBottom: wasAtBottom);
-      });
-      return;
-    }
-
-    // Get current messages
-    final chatMessages = messages[selectedChatId] ?? [];
-
-    if (chatMessages.isEmpty) {
-      return;
-    }
-
-    // If user was at bottom or it's a new chat, scroll to bottom
-    if (wasAtBottom || _isUserAtBottom) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients) {
-          // Smooth scroll to bottom
-          _scrollController.animateTo(
-            _scrollController.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
-        }
-      });
-    }
-
-    // Update user position
-    setState(() {
-      _isUserAtBottom = true;
-    });
   }
 
   void _handlePrivateMessagesLoaded(
@@ -6730,9 +6689,7 @@ class _ChatScreenState extends State<ChatScreen>
 
       // Transform messages
       final transformedMessages = messagesList.map((msg) {
-        final message = Message.fromJson(msg);
-
-        return message;
+        return Message.fromJson(msg);
       }).toList();
 
       // Sort by timestamp (oldest to newest)
@@ -6745,16 +6702,52 @@ class _ChatScreenState extends State<ChatScreen>
           _isLoadingMessages = false;
         });
 
-        // ✅ Scroll to bottom AFTER messages are loaded
+        // ✅ FIXED: Multiple callbacks to ensure scrolling works
         WidgetsBinding.instance.addPostFrameCallback((_) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            _scrollToLatestMessage(wasAtBottom: wasAtBottom);
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _scrollToBottom(force: true, isInitialLoad: true);
+            });
           });
         });
       }
     } else {
       setState(() => _isLoadingMessages = false);
     }
+  }
+
+  void _scrollToLatestMessage({bool wasAtBottom = true}) {
+    // Wait for the list to be built completely
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scrollController.hasClients) {
+        // If controller not ready, try again in next frame
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _scrollToLatestMessage(wasAtBottom: wasAtBottom);
+        });
+        return;
+      }
+
+      // Always scroll to bottom when opening a chat
+      if (wasAtBottom || _isUserAtBottom) {
+        // Use jumpTo first to get to the position quickly
+        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+
+        // Then do a small animation to ensure smooth settling
+        Future.delayed(const Duration(milliseconds: 50), () {
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(
+              _scrollController.position.maxScrollExtent,
+              duration: const Duration(milliseconds: 100),
+              curve: Curves.easeOut,
+            );
+          }
+        });
+      }
+
+      setState(() {
+        _isUserAtBottom = true;
+      });
+    });
   }
 
   void _closeChat() {
@@ -8068,26 +8061,28 @@ class _ChatScreenState extends State<ChatScreen>
 
   void _scrollToBottom({bool force = false, bool isInitialLoad = false}) {
     if (!_scrollController.hasClients) {
+      // Schedule for next frame if not ready
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _scrollToBottom(force: force, isInitialLoad: isInitialLoad);
       });
       return;
     }
 
-    final maxScroll = _scrollController.position.maxScrollExtent;
-
-    // Use different approach for initial load
+    // For initial load or forced scroll, jump immediately then animate
     if (isInitialLoad || force) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients) {
-          // Jump to bottom for initial load
-          _scrollController.jumpTo(maxScroll);
+      // First jump to bottom
+      _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
 
-          // Then smooth scroll to ensure proper positioning
-          WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Wait a bit and do it again to ensure we're truly at bottom
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (_scrollController.hasClients) {
+          _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+
+          // Final small animation to settle
+          Future.delayed(const Duration(milliseconds: 50), () {
             if (_scrollController.hasClients) {
               _scrollController.animateTo(
-                maxScroll,
+                _scrollController.position.maxScrollExtent,
                 duration: const Duration(milliseconds: 100),
                 curve: Curves.easeOut,
               );
@@ -8096,17 +8091,23 @@ class _ChatScreenState extends State<ChatScreen>
         }
       });
     } else {
-      // Regular smooth scroll
+      // Regular smooth scroll for new messages
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_scrollController.hasClients) {
           _scrollController.animateTo(
-            maxScroll,
+            _scrollController.position.maxScrollExtent,
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeOut,
           );
         }
       });
     }
+
+    // Update state
+    setState(() {
+      _isUserAtBottom = true;
+      _showScrollToBottom = false;
+    });
   }
 
   String _formatTime(dynamic timestamp) {

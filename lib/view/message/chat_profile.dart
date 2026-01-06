@@ -104,7 +104,8 @@ class _ChatProfileScreenState extends State<ChatProfileScreen> {
                     CircleAvatar(
                       radius: 48,
                       backgroundImage: profileVal.profileImageUrl.isNotEmpty
-                          ? CachedNetworkImageProvider(profileVal.profileImageUrl)
+                          ? CachedNetworkImageProvider(
+                              profileVal.profileImageUrl)
                           : AssetImage('assets/default_avatar.png')
                               as ImageProvider,
                       backgroundColor: Colors.grey[400],
@@ -196,13 +197,6 @@ class _ChatProfileScreenState extends State<ChatProfileScreen> {
                           icon: Icon(Icons.image, size: 16),
                           text: "Media",
                         ),
-                        // Tab(icon: Icon(Icons.link, size: 16), text: "Link"),
-                        // Tab(
-                        //     icon: Icon(Icons.description_outlined, size: 16),
-                        //     text: "Doc"),
-                        // Tab(
-                        //     icon: Icon(Icons.group_outlined, size: 16),
-                        //     text: "Group"),
                       ],
                     ),
                     // Expanded the TabBarView to fill available area
@@ -311,7 +305,7 @@ class _ChatProfileScreenState extends State<ChatProfileScreen> {
               RouteName.clipProfieScreen,
               arguments: chatProfile.userId,
             );
-                      break;
+            break;
           case 'block_user':
             await blockUser();
             break;
@@ -576,8 +570,7 @@ class _ChatProfileScreenState extends State<ChatProfileScreen> {
   }
 
   Future<void> blockUser() async {
-    final UserPreferencesViewmodel userPreferences =
-        UserPreferencesViewmodel();
+    final UserPreferencesViewmodel userPreferences = UserPreferencesViewmodel();
     LoginResponseModel? userData = await userPreferences.getUser();
     final token = userData?.token;
 
