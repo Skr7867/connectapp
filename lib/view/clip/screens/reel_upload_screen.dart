@@ -31,11 +31,15 @@ class UploadProgressController extends GetxController {
   var uploadingFileName = ''.obs;
   var uploadStatus = ''.obs;
 
+  // Add cancellation token
+  http.Client? _uploadClient;
+
   void startUpload(String fileName) {
     isUploading.value = true;
     uploadProgress.value = 0.0;
     uploadingFileName.value = fileName;
     uploadStatus.value = 'uploading';
+    _uploadClient = http.Client();
   }
 
   void updateProgress(double progress, {String? status}) {
@@ -48,25 +52,27 @@ class UploadProgressController extends GetxController {
   void completeUpload() {
     uploadProgress.value = 1.0;
     uploadStatus.value = 'completed';
-    Future.delayed(Duration(seconds: 3), () {
-      isUploading.value = false;
-      uploadProgress.value = 0.0;
-      uploadingFileName.value = '';
-      uploadStatus.value = '';
+    Future.delayed(Duration(seconds: 2), () {
+      resetUpload();
     });
   }
 
   void failUpload(String error) {
     uploadStatus.value = 'failed';
+    log('Upload failed: $error');
     Future.delayed(Duration(seconds: 5), () {
-      isUploading.value = false;
-      uploadProgress.value = 0.0;
-      uploadingFileName.value = '';
-      uploadStatus.value = '';
+      resetUpload();
     });
   }
 
   void cancelUpload() {
+    _uploadClient?.close();
+    resetUpload();
+  }
+
+  void resetUpload() {
+    _uploadClient?.close();
+    _uploadClient = null;
     isUploading.value = false;
     uploadProgress.value = 0.0;
     uploadingFileName.value = '';
@@ -78,19 +84,17 @@ class UploadProgressController extends GetxController {
 class VideoControllerManager {
   final Map<String, VideoPlayerController> _controllers = {};
   final Map<String, bool> _initializedControllers = {};
-  final int maxCachedControllers = 5; // Keep only 5 controllers in memory
+  final int maxCachedControllers = 5;
 
   Future<VideoPlayerController?> getOrCreateController(
     String clipId,
     String videoUrl,
   ) async {
-    // Return existing controller if available
     if (_controllers.containsKey(clipId)) {
       log('Reusing existing controller for clip: $clipId');
       return _controllers[clipId];
     }
 
-    // Clean up old controllers if we have too many
     if (_controllers.length >= maxCachedControllers) {
       _cleanupOldControllers();
     }
@@ -115,7 +119,6 @@ class VideoControllerManager {
   void _cleanupOldControllers() {
     if (_controllers.length <= maxCachedControllers) return;
 
-    // Remove oldest controllers (keep most recent 3)
     final keys = _controllers.keys.toList();
     final toRemove = keys.take(keys.length - 3).toList();
 
@@ -371,19 +374,19 @@ class _ReelsPageState extends State<ReelsPage>
                                                 ? 'Processing Clip'
                                                 : 'Uploading Clip',
                                     style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                                        color: Colors.white,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        fontFamily: AppFonts.opensansRegular),
                                   ),
                                   SizedBox(height: 2),
                                   Text(
                                     uploadProgressController
                                         .uploadingFileName.value,
                                     style: TextStyle(
-                                      color: Colors.grey[400],
-                                      fontSize: 12,
-                                    ),
+                                        color: Colors.grey[400],
+                                        fontSize: 12,
+                                        fontFamily: AppFonts.opensansRegular),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -660,8 +663,7 @@ class _ReelsPageState extends State<ReelsPage>
             },
           ),
         ),
-        if (_reelsManager
-            .isLoadingMore.value) // Use isLoadingMore instead of isLoading
+        if (_reelsManager.isLoadingMore.value)
           Positioned(
             bottom: 120,
             left: 0,
@@ -2676,18 +2678,6 @@ class _AddCaptionPageState extends State<AddCaptionPage> {
   }
 
   Future<void> _uploadClip() async {
-    if (!_reelsManager.areUploadDetailsReady) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text('Upload preparation incomplete. Please try again.')),
-      );
-      return;
-    }
-
-    final UserPreferencesViewmodel userPreferences = UserPreferencesViewmodel();
-    LoginResponseModel? userData = await userPreferences.getUser();
-    final token = userData!.token;
-
     if (_captionController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Please add a caption')),
@@ -2695,13 +2685,26 @@ class _AddCaptionPageState extends State<AddCaptionPage> {
       return;
     }
 
+    // **CRITICAL FIX: Refresh upload details before each upload**
+    await _reelsManager.refreshUploadDetails();
+
+    if (!_reelsManager.areUploadDetailsReady) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to prepare upload. Please try again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     // Start upload in background
     uploadProgressController.startUpload(path.basename(widget.videoFile.path));
 
-    // Navigate back immediately - upload continues in background
+    // Navigate back immediately
     Navigator.popUntil(context, (route) => route.isFirst);
 
-    // Show a toast that upload has started
+    // Show upload started notification
     Get.snackbar(
       'Upload Started',
       'Your clip is being uploaded in the background',
@@ -2713,10 +2716,13 @@ class _AddCaptionPageState extends State<AddCaptionPage> {
     );
 
     // Perform upload in background
+    final UserPreferencesViewmodel userPreferences = UserPreferencesViewmodel();
+    LoginResponseModel? userData = await userPreferences.getUser();
+    final token = userData!.token;
+
     _performBackgroundUpload(token);
   }
 
-// 3. New method for background upload
   Future<void> _performBackgroundUpload(String token) async {
     try {
       String tagsString = tags.isNotEmpty
@@ -2724,6 +2730,10 @@ class _AddCaptionPageState extends State<AddCaptionPage> {
           : '#general';
 
       String clipId = _reelsManager.savedClipId.value;
+      String uploadUrl = _reelsManager.savedUploadUrl.value;
+
+      log('Using Clip ID: $clipId');
+      log('Upload URL: ${uploadUrl.substring(0, 50)}...');
 
       Map<String, dynamic> requestBody = {
         'caption': _captionController.text.trim(),
@@ -2731,10 +2741,7 @@ class _AddCaptionPageState extends State<AddCaptionPage> {
         'clipId': clipId,
       };
 
-      log('Request body: ${json.encode(requestBody)}');
-      log('Using Clip ID: $clipId');
-
-      // Update progress to 10%
+      // Update progress
       uploadProgressController.updateProgress(0.1, status: 'Preparing...');
 
       // Step 1: Save metadata
@@ -2748,73 +2755,98 @@ class _AddCaptionPageState extends State<AddCaptionPage> {
         body: json.encode(requestBody),
       );
 
-      log('Metadata response status code: ${metadataResponse.statusCode}');
+      log('Metadata response: ${metadataResponse.statusCode}');
 
       if (metadataResponse.statusCode == 200 ||
           metadataResponse.statusCode == 201) {
         uploadProgressController.updateProgress(0.2,
             status: 'Uploading video...');
 
-        // Step 2: Upload video file
-        String uploadUrl = _reelsManager.savedUploadUrl.value;
-        if (uploadUrl.isNotEmpty) {
-          log('Starting video upload to: $uploadUrl');
+        // Step 2: Upload video file with real progress tracking
+        final videoBytes = await widget.videoFile.readAsBytes();
+        final totalBytes = videoBytes.length;
 
-          final videoBytes = await widget.videoFile.readAsBytes();
-          final totalBytes = videoBytes.length;
-          log('Video file size: $totalBytes bytes');
+        log('Starting video upload. Size: ${(totalBytes / (1024 * 1024)).toStringAsFixed(2)} MB');
 
-          // Simulate smooth upload progress
-          _simulateUploadProgress();
+        // Use StreamedRequest for real progress tracking
+        final request = http.StreamedRequest('PUT', Uri.parse(uploadUrl));
+        request.headers['Content-Type'] = 'video/mp4';
+        request.headers['Content-Length'] = totalBytes.toString();
 
-          final uploadResponse = await http.put(
-            Uri.parse(uploadUrl),
-            headers: {
-              'Content-Type': 'video/mp4',
-              'Content-Length': totalBytes.toString(),
+        int bytesSent = 0;
+        final stream = Stream.fromIterable(
+          List.generate(
+            (totalBytes / 8192).ceil(),
+            (i) {
+              final start = i * 8192;
+              final end =
+                  (start + 8192 < totalBytes) ? start + 8192 : totalBytes;
+              return videoBytes.sublist(start, end);
             },
-            body: videoBytes,
+          ),
+        );
+
+        stream.listen(
+          (chunk) {
+            request.sink.add(chunk);
+            bytesSent += chunk.length;
+
+            // Calculate real progress (20% to 90%)
+            final progress = 0.2 + (bytesSent / totalBytes * 0.7);
+            uploadProgressController.updateProgress(
+              progress,
+              status:
+                  'Uploading... ${(bytesSent / (1024 * 1024)).toStringAsFixed(1)}/${(totalBytes / (1024 * 1024)).toStringAsFixed(1)} MB',
+            );
+          },
+          onDone: () {
+            request.sink.close();
+          },
+          onError: (error) {
+            request.sink.addError(error);
+          },
+        );
+
+        final uploadResponse = await request.send();
+        final responseBody = await uploadResponse.stream.bytesToString();
+
+        log('Upload response status: ${uploadResponse.statusCode}');
+
+        if (uploadResponse.statusCode == 200) {
+          uploadProgressController.updateProgress(0.95,
+              status: 'Finalizing...');
+
+          // Wait for backend processing
+          await Future.delayed(Duration(seconds: 1));
+
+          uploadProgressController.completeUpload();
+
+          // Show success notification
+          Get.snackbar(
+            'Upload Complete!',
+            'Your clip has been uploaded successfully',
+            snackPosition: SnackPosition.TOP,
+            backgroundColor: Colors.green,
+            colorText: Colors.white,
+            icon: Icon(Icons.check_circle, color: Colors.white),
+            duration: Duration(seconds: 3),
           );
 
-          log('Video upload response status: ${uploadResponse.statusCode}');
-
-          if (uploadResponse.statusCode == 200) {
-            uploadProgressController.updateProgress(0.95,
-                status: 'Finalizing...');
-
-            // Wait a moment for backend processing
-            await Future.delayed(Duration(seconds: 1));
-
-            uploadProgressController.completeUpload();
-
-            // Show success notification
-            Get.snackbar(
-              'Upload Complete!',
-              'Your clip has been uploaded successfully',
-              snackPosition: SnackPosition.TOP,
-              backgroundColor: Colors.green,
-              colorText: Colors.white,
-              icon: Icon(Icons.check_circle, color: Colors.white),
-              duration: Duration(seconds: 3),
-            );
-
-            // Refresh clips to show the new one
-            _reelsManager.refreshClips();
-          } else {
-            log('Upload response body: ${uploadResponse.body}');
-            throw Exception(
-                'Failed to upload video: ${uploadResponse.statusCode}');
-          }
+          // Refresh clips to show the new one
+          await _reelsManager.refreshClips();
         } else {
-          throw Exception('Upload URL is not available');
+          log('Upload failed: ${uploadResponse.statusCode} - $responseBody');
+          throw Exception(
+              'Failed to upload video: ${uploadResponse.statusCode}');
         }
       } else {
         String errorMessage = 'Failed to save metadata';
         try {
           final errorBody = json.decode(metadataResponse.body);
           errorMessage = errorBody['message'] ?? errorMessage;
+          log('Metadata error: $errorMessage');
         } catch (e) {
-          // Keep default error message
+          log('Error parsing metadata response: $e');
         }
         throw Exception(
             '$errorMessage (Status: ${metadataResponse.statusCode})');
@@ -2823,25 +2855,15 @@ class _AddCaptionPageState extends State<AddCaptionPage> {
       log('Upload error: $e');
       uploadProgressController.failUpload(e.toString());
 
-      // Show error notification
       Get.snackbar(
         'Upload Failed',
-        'Failed to upload clip}',
+        'Failed to upload clip: ${e.toString()}',
         snackPosition: SnackPosition.TOP,
         backgroundColor: Colors.red,
         colorText: Colors.white,
         icon: Icon(Icons.error, color: Colors.white),
         duration: Duration(seconds: 5),
       );
-    }
-  }
-
-// Add this helper method to simulate smooth progress
-  void _simulateUploadProgress() async {
-    // Simulate progress from 20% to 85%
-    for (double progress = 0.2; progress <= 0.85; progress += 0.05) {
-      uploadProgressController.updateProgress(progress, status: 'Uploading...');
-      await Future.delayed(Duration(milliseconds: 200));
     }
   }
 
@@ -2910,7 +2932,7 @@ class _AddCaptionPageState extends State<AddCaptionPage> {
                   ),
                 ),
 
-              // Add Caption Section
+              // Caption field
               Text(
                 'Add Caption',
                 style: TextStyle(
@@ -2950,7 +2972,7 @@ class _AddCaptionPageState extends State<AddCaptionPage> {
               ),
               SizedBox(height: 24),
 
-              // Add Tags Section
+              // Tags section
               Text(
                 '# Add Tags',
                 style: TextStyle(
@@ -3007,7 +3029,7 @@ class _AddCaptionPageState extends State<AddCaptionPage> {
               ),
               SizedBox(height: 16),
 
-              // Display added tags
+              // Display tags
               if (tags.isNotEmpty)
                 Wrap(
                   spacing: 10,
@@ -3064,7 +3086,7 @@ class _AddCaptionPageState extends State<AddCaptionPage> {
 
               SizedBox(height: 40),
 
-              // Upload Button
+              // Upload button
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -3082,50 +3104,20 @@ class _AddCaptionPageState extends State<AddCaptionPage> {
                     ),
                     elevation: areUploadDetailsReady ? 2 : 0,
                   ),
-                  child: isUploading
-                      ? Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                color: Theme.of(context)
-                                    .textTheme
-                                    .bodyLarge
-                                    ?.color,
-                                strokeWidth: 2,
-                              ),
-                            ),
-                            SizedBox(width: 12),
-                            Text(
-                              'Uploading...',
-                              style: TextStyle(
-                                color: Theme.of(context)
-                                    .textTheme
-                                    .bodyLarge
-                                    ?.color,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: AppFonts.opensansRegular,
-                              ),
-                            ),
-                          ],
-                        )
-                      : Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.cloud_upload, size: 22),
-                            SizedBox(width: 12),
-                            Text(
-                              'Upload Clip',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.cloud_upload, size: 22),
+                      SizedBox(width: 12),
+                      Text(
+                        'Upload Clip',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
                         ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               SizedBox(height: 20),
