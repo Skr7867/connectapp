@@ -20,10 +20,6 @@ class UnreadCountController extends GetxController {
 
     loadInitialUnreadCounts();
 
-    // Listen to socket events
-    // _socketService.unreadCountStream.listen(updateUnreadFromSocket);
-    // _socketService.newMessageStream.listen(onNewMessageReceived);
-    // _socketService.messageStream.listen(onNewMessageReceived);
     _socketService.messagesReadStream.listen(onMessagesRead);
 
     log("📡 UnreadCountController initialized");

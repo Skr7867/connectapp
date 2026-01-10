@@ -5,6 +5,6 @@ class Myconst {
   // static const String clientId =
   //     "35673142221-fggbtnn2jjbg9go84g8v3gkqop17f9h3.apps.googleusercontent.com";
 
-  static const String clientId =
-      "35673142221-hr1271fa869aska0gppns87pr270gkfo.apps.googleusercontent.com";
+  static const String googleWebClientId =
+      "35673142221-fggbtnn2jjbg9go84g8v3gkqop17f9h3.apps.googleusercontent.com";
 }

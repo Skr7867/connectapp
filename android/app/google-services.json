@@ -14,16 +14,12 @@
       },
       "oauth_client": [
         {
-          "client_id": "35673142221-nvtebgd9d42ih7r07o0oa95nmmvt6afv.apps.googleusercontent.com",
+          "client_id": "35673142221-j32mnq85espjjt36o2egrms9o6kve84c.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "app.connectapp.com",
-            "certificate_hash": "5f60dc7c21c2436283c7619b2c0c74a7ef1613a1"
+            "certificate_hash": "93d82a1aed550f5fff3f5133a8f332005de41d2e"
           }
-        },
-        {
-          "client_id": "35673142221-hr1271fa869aska0gppns87pr270gkfo.apps.googleusercontent.com",
-          "client_type": 3
         }
       ],
       "api_key": [
@@ -35,7 +31,7 @@
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "35673142221-hr1271fa869aska0gppns87pr270gkfo.apps.googleusercontent.com",
+              "client_id": "35673142221-fggbtnn2jjbg9go84g8v3gkqop17f9h3.apps.googleusercontent.com",
               "client_type": 3
             },
             {

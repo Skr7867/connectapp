@@ -23,7 +23,7 @@ class SetPasswordScreen extends StatelessWidget {
   GoogleSignIn signIn = GoogleSignIn(scopes: [
     'email',
     'profile',
-  ], serverClientId: Myconst.clientId);
+  ], serverClientId: Myconst.googleWebClientId);
 
   void googleSignIn() async {
     try {
