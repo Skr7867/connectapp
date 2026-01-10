@@ -171,7 +171,7 @@ class NetworkApiServices extends BaseApiServices {
 
   dynamic returnResponse(http.Response response) {
     log('Response Code: ${response.statusCode}');
-    log('Response Body: ${response.body}');
+    debugPrint('Response Body: ${response.body}');
 
     dynamic responseJson;
 

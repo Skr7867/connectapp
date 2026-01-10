@@ -102,6 +102,7 @@ class _ChatScreenState extends State<ChatScreen>
   bool _isEditingMode = false;
   final TextEditingController _editMessageController = TextEditingController();
   Message? _editingMessage;
+  Timer? _olderMsgTimeout;
   bool _showScrollToBottom = false;
   static const double _scrollThreshold = 50.0;
   static const double _bottomThreshold = 100.0;
@@ -276,6 +277,27 @@ class _ChatScreenState extends State<ChatScreen>
     }
 
     return DateTime.now();
+  }
+
+  void _resetMessageInput() {
+    _messageController.clear();
+    _editMessageController.clear();
+
+    _isEditingMode = false;
+    _editingMessage = null;
+
+    showReplyPreview = false;
+    replyingToMessage = null;
+
+    _isUploading = false;
+    _uploadProgress = 0;
+  }
+
+  void _resetChatSearch() {
+    _isChatSearching = false;
+    _chatSearchQuery = '';
+    _chatSearchController.clear();
+    _chatFilteredMessages.clear();
   }
 
   void _onMessageTextChanged(String text) {
@@ -557,64 +579,77 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   void _loadOlderMessages() {
-    if (selectedChatId == null || _isLoadingOlderMessages) {
-      return;
-    }
-    if (_hasMoreMessages[selectedChatId] == false) {
+    if (selectedChatId == null ||
+        _isLoadingOlderMessages ||
+        _hasMoreMessages[selectedChatId] == false) {
       return;
     }
 
-    setState(() {
-      _isLoadingOlderMessages = true;
-    });
-    Timer(Duration(seconds: 10), () {
+    // 🔐 LOCK immediately (no rebuild)
+    _isLoadingOlderMessages = true;
+
+    _olderMsgTimeout?.cancel();
+    _olderMsgTimeout = Timer(const Duration(seconds: 10), () {
       if (_isLoadingOlderMessages) {
-        setState(() {
-          _isLoadingOlderMessages = false;
-        });
-        _showSnackBar('Request timeout. Please try again.');
+        _isLoadingOlderMessages = false;
+        if (mounted) {
+          setState(() {});
+          _showSnackBar('Request timeout. Please try again.');
+        }
       }
     });
 
     final chat = selectedChat;
     if (chat == null) {
-      setState(() {
-        _isLoadingOlderMessages = false;
-      });
+      _isLoadingOlderMessages = false;
+      _olderMsgTimeout?.cancel();
       return;
     }
 
-    final currentMessages = messages[selectedChatId] ?? [];
-    final oldestMessageId =
-        currentMessages.isNotEmpty ? currentMessages.first.id : null;
+    // final List<Message> currentMessages = messages[selectedChatId] ?? [];
+
+    // Always use earliest message by time
+    // currentMessages.sort(
+    //   (a, b) => a.timestamp.compareTo(b.timestamp),
+    // );
+
+    // final oldestMessageId =
+    //     currentMessages.isNotEmpty ? currentMessages.first.id : null;
 
     if (chat.isGroup) {
       isGroup = true;
       _socketService.loadOlderGroupMessages(
         groupId: selectedChatId!,
-        beforeMessageId: oldestMessageId,
+        // beforeMessageId: oldestMessageId,
         limit: 50,
-        onResponse: _handleOlderGroupMessages,
+        onResponse: (data) {
+          _olderMsgTimeout?.cancel();
+          _handleOlderGroupMessages(data);
+        },
       );
     } else {
       isGroup = false;
-      final otherParticipant = chat.participants?.firstWhere(
-        (p) => p.id != currentUserId,
-      );
+      final otherParticipant =
+          chat.participants?.firstWhere((p) => p.id != currentUserId);
 
       if (otherParticipant != null && currentUserId != null) {
         _socketService.loadOlderPrivateMessages(
           user1Id: currentUserId!,
           user2Id: otherParticipant.id,
-          beforeMessageId: oldestMessageId,
+          // beforeMessageId: oldestMessageId,
           limit: 50,
-          onResponse: _handleOlderPrivateMessages,
+          onResponse: (data) {
+            _olderMsgTimeout?.cancel();
+            _handleOlderPrivateMessages(data);
+          },
         );
       } else {
-        setState(() {
-          _isLoadingOlderMessages = false;
-        });
-        _showSnackBar('Unable to load older messages');
+        _olderMsgTimeout?.cancel();
+        _isLoadingOlderMessages = false;
+        if (mounted) {
+          setState(() {});
+          _showSnackBar('Unable to load older messages');
+        }
       }
     }
   }
@@ -4525,6 +4560,8 @@ class _ChatScreenState extends State<ChatScreen>
     //  _olderPrivateMessagesSubscription?.cancel();
     // _olderGroupMessagesSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
+    _chatSearchController.dispose();
+    _resetChatSearch();
     ChatOpenTracker.currentChatId = null;
     adminAddedSubscription?.cancel();
     _pinnedMessageSubscription.cancel();
@@ -4988,35 +5025,57 @@ class _ChatScreenState extends State<ChatScreen>
 
   // Fixed: Direct callback handler for older group messages
   void _handleOlderGroupMessages(Map<String, dynamic> data) {
-    setState(() {
-      _isLoadingOlderMessages = false; // Always reset loading state
+    if (data['status'] != 200) {
+      _isLoadingOlderMessages = false;
+      _showSnackBar('Failed to load older messages: ${data['message']}');
+      return;
+    }
+
+    final String groupId = data['groupId'];
+    final List<dynamic> newMessages = data['messages'] ?? [];
+    final bool hasMore = data['hasMore'] ?? false;
+
+    if (newMessages.isEmpty) {
+      _isLoadingOlderMessages = false;
+      _hasMoreMessages[groupId] = hasMore;
+      return;
+    }
+
+    // Preserve scroll BEFORE mutation
+    final controller = _scrollController;
+    final prevOffset = controller.hasClients ? controller.offset : 0;
+    final prevMaxScroll =
+        controller.hasClients ? controller.position.maxScrollExtent : 0;
+
+    // Convert
+    final List<Message> olderMessages =
+        newMessages.map((e) => Message.fromJson(e)).toList();
+
+    // Merge + DEDUPE
+    final List<Message> merged = [
+      ...olderMessages,
+      ...(messages[groupId] ?? []),
+    ];
+
+    final Map<String, Message> unique = {for (final msg in merged) msg.id: msg};
+
+    final List<Message> finalMessages = unique.values.toList()
+      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!controller.hasClients) return;
+
+      final newMaxScroll = controller.position.maxScrollExtent;
+      final delta = newMaxScroll - prevMaxScroll;
+
+      controller.jumpTo(prevOffset + delta);
     });
 
-    if (data['status'] == 200) {
-      final String groupId = data['groupId'];
-      final List<dynamic> newMessages = data['messages'] ?? [];
-      final bool hasMore = data['hasMore'] ?? false;
-
-      setState(() {
-        _hasMoreMessages[groupId] = hasMore;
-
-        if (newMessages.isNotEmpty) {
-          // Convert to Message objects
-          final List<Message> messageObjects = newMessages.map((msgData) {
-            return Message.fromJson(msgData);
-          }).toList();
-
-          // Prepend to existing messages
-          final existingMessages = messages[groupId] ?? [];
-          messages[groupId] = [...messageObjects, ...existingMessages];
-          _cleanupMessageKeys();
-          // Maintain scroll position
-          _maintainScrollPosition(newMessages.length);
-        }
-      });
-    } else {
-      _showSnackBar('Failed to load older messages: ${data['message']}');
-    }
+    setState(() {
+      messages[groupId] = finalMessages;
+      _hasMoreMessages[groupId] = hasMore;
+      _isLoadingOlderMessages = false;
+    });
   }
 
   void _maintainScrollPosition(int newMessageCount) {
@@ -6189,27 +6248,17 @@ class _ChatScreenState extends State<ChatScreen>
 
   Widget _buildUnreadMessageSeparator() {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Center(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: AppColors.greyColor.withOpacity(0.4),
-                ),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                'New messages',
-                style: TextStyle(
-                    color: Theme.of(context).textTheme.bodyLarge?.color,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    fontFamily: AppFonts.opensansRegular),
-              ),
+            child: Text(
+              '',
+              style: TextStyle(
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  fontFamily: AppFonts.opensansRegular),
             ),
           ),
         ],
@@ -6554,6 +6603,8 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   void _selectChat(String chatId) async {
+    _resetChatSearch();
+    _resetMessageInput();
     final unreadController = Get.find<UnreadCountController>();
     final groupUnreadController = Get.find<GroupUnreadCountController>();
 
@@ -9410,6 +9461,8 @@ class _ChatScreenState extends State<ChatScreen>
                         color: Theme.of(context).textTheme.bodyLarge?.color,
                       ),
                       onPressed: () {
+                        _resetChatSearch();
+                        _resetMessageInput();
                         _clearReplyState();
                         _closeChat();
                       },

@@ -217,12 +217,16 @@ class SocketService {
       });
 
       _socket?.on('groupDetails', (data) {
+        log('🟢 Group chat raw data: $data');
+
         try {
-          _groupDetailsController.add(Map<String, dynamic>.from(data));
-        } catch (_) {
+          final parsed = Map<String, dynamic>.from(data);
+          _groupDetailsController.add(parsed);
+        } catch (e, st) {
+          log('❌ groupDetails parse error: $e');
+          log(st.toString());
           _groupDetailsController.add({'data': data});
         }
-        log('group details work: $data');
       });
 
       _socket?.on('unreadMessageUpdate', (data) async {

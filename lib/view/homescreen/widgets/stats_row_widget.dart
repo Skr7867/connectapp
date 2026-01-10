@@ -20,14 +20,7 @@ class StatsRow extends StatelessWidget {
           value: Obx(() {
             switch (userData.rxRequestStatus.value) {
               case Status.LOADING:
-                return SizedBox(
-                  height: 10,
-                  width: 10,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 1,
-                    color: AppColors.blackColor,
-                  ),
-                );
+                return SizedBox(width: 10, child: Text('0'));
               case Status.ERROR:
                 return const Text("0");
               case Status.COMPLETED:
@@ -50,14 +43,7 @@ class StatsRow extends StatelessWidget {
           value: Obx(() {
             switch (userData.rxRequestStatus.value) {
               case Status.LOADING:
-                return SizedBox(
-                  height: 10,
-                  width: 10,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 1,
-                    color: AppColors.blackColor,
-                  ),
-                );
+                return SizedBox(width: 10, child: Text('0'));
               case Status.ERROR:
                 return const Text("0");
               case Status.COMPLETED:
@@ -80,14 +66,7 @@ class StatsRow extends StatelessWidget {
           value: Obx(() {
             switch (userData.rxRequestStatus.value) {
               case Status.LOADING:
-                return SizedBox(
-                  height: 10,
-                  width: 10,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 1,
-                    color: AppColors.blackColor,
-                  ),
-                );
+                return SizedBox(width: 10, child: Text('0'));
               case Status.ERROR:
                 return const Text(
                   '0',

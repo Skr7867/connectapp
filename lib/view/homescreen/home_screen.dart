@@ -383,7 +383,8 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(
               width: 16,
               height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2),
+              // child: CircularProgressIndicator(strokeWidth: 2),
+              child: Text('0'),
             ),
           ],
         );
