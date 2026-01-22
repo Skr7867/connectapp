@@ -13,16 +13,18 @@ enum StickerCategory {
 
 class StickerSelectorWidget extends StatefulWidget {
   final Function(String stickerUrl) onStickerSelected;
-  final UserProfileModel? userProfile; // Made optional
+  final UserProfileModel? userProfile;
   final String? currentUserId;
   final String? currentUserName;
+  final bool isLoading;
 
   const StickerSelectorWidget({
     super.key,
     required this.onStickerSelected,
-    this.userProfile, // Made optional
+    this.userProfile,
     this.currentUserId,
     this.currentUserName,
+    this.isLoading = false,
   });
 
   @override
@@ -194,10 +196,41 @@ class _StickerSelectorWidgetState extends State<StickerSelectorWidget>
   @override
   void initState() {
     super.initState();
+    // Initialize with minimal length
     _tabController = TabController(
-      length: _getAvailableCategories().length,
+      length: 1,
       vsync: this,
     );
+    // Update after the first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _updateTabController();
+    });
+  }
+
+  @override
+  void didUpdateWidget(StickerSelectorWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.userProfile != oldWidget.userProfile ||
+        widget.isLoading != oldWidget.isLoading) {
+      _updateTabController();
+    }
+  }
+
+  void _updateTabController() {
+    final availableCategories = _getAvailableCategories();
+    final newLength = availableCategories.isNotEmpty ? availableCategories.length : 1;
+    
+    if (_tabController.length != newLength) {
+      if (mounted) {
+        setState(() {
+          _tabController.dispose();
+          _tabController = TabController(
+            length: newLength,
+            vsync: this,
+          );
+        });
+      }
+    }
   }
 
   @override
@@ -208,12 +241,19 @@ class _StickerSelectorWidgetState extends State<StickerSelectorWidget>
 
   // Get available categories based on subscription
   List<StickerCategory> _getAvailableCategories() {
-    // If userProfile is null, provide default access (first 2 categories for free users)
-    final stickerPack =
-        widget.userProfile?.subscriptionFeatures?.stickerPack ?? 2;
+    // Handle loading state - show first 2 categories
+    if (widget.isLoading) {
+      return StickerCategory.values.take(2).toList();
+    }
+    
+    // Handle null userProfile - show first 2 categories for unauthenticated users
+    if (widget.userProfile == null) {
+      return StickerCategory.values.take(2).toList();
+    }
+    
+    final stickerPack = widget.userProfile!.subscriptionFeatures?.stickerPack ?? 2;
     final categories = StickerCategory.values;
 
-    // Return categories based on subscription level
     if (stickerPack >= categories.length) {
       return categories; // All categories available
     } else {
@@ -268,6 +308,15 @@ class _StickerSelectorWidgetState extends State<StickerSelectorWidget>
   Widget _buildStickerGrid(StickerCategory category) {
     final stickers = stickerCategories[category] ?? [];
 
+    if (stickers.isEmpty) {
+      return const Center(
+        child: Text(
+          'No stickers available',
+          style: TextStyle(color: Colors.grey),
+        ),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: GridView.builder(
@@ -281,7 +330,12 @@ class _StickerSelectorWidgetState extends State<StickerSelectorWidget>
         itemBuilder: (context, index) {
           final stickerUrl = stickers[index];
           return GestureDetector(
-            onTap: () => widget.onStickerSelected(stickerUrl),
+            onTap: () {
+              if (!widget.isLoading) {
+                widget.onStickerSelected(stickerUrl);
+                Navigator.pop(context);
+              }
+            },
             child: Container(
               decoration: BoxDecoration(
                 color: Colors.grey[800],
@@ -350,7 +404,6 @@ class _StickerSelectorWidgetState extends State<StickerSelectorWidget>
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () {
-              // Handle upgrade subscription
               Navigator.pop(context);
               // Navigate to subscription page
             },
@@ -365,7 +418,7 @@ class _StickerSelectorWidgetState extends State<StickerSelectorWidget>
     );
   }
 
-  Widget _buildProfileLoadingView() {
+  Widget _buildLoadingView() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -373,16 +426,18 @@ class _StickerSelectorWidgetState extends State<StickerSelectorWidget>
           const CircularProgressIndicator(color: Colors.blue),
           const SizedBox(height: 16),
           const Text(
-            'Loading Profile...',
+            'Loading Stickers...',
             style: TextStyle(
               color: Colors.white,
               fontSize: 16,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Please wait while we load your sticker packs',
-            style: TextStyle(
+          Text(
+            widget.userProfile == null 
+              ? 'Fetching your profile information' 
+              : 'Preparing your sticker packs',
+            style: const TextStyle(
               color: Colors.grey,
               fontSize: 14,
             ),
@@ -393,47 +448,124 @@ class _StickerSelectorWidgetState extends State<StickerSelectorWidget>
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    // Show loading view if profile is not available
-    if (widget.userProfile == null) {
-      return Container(
-        height: 500,
-        decoration: const BoxDecoration(
-          color: Color(0xFF2A2D3A),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
+  Widget _buildContent() {
+    final availableCategories = _getAvailableCategories();
+    
+    if (availableCategories.isEmpty) {
+      return Center(
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Select a Sticker',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close, color: Colors.white),
-                  ),
-                ],
+            const Icon(Icons.error_outline, size: 64, color: Colors.grey),
+            const SizedBox(height: 16),
+            const Text(
+              'No sticker packs available',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
               ),
             ),
-            Expanded(child: _buildProfileLoadingView()),
+            const SizedBox(height: 8),
+            const Text(
+              'Please check your subscription or try again later',
+              style: TextStyle(
+                color: Colors.grey,
+                fontSize: 14,
+              ),
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       );
     }
 
-    final availableCategories = _getAvailableCategories();
+    return Column(
+      children: [
+        // Show subscription info if not all categories are available
+        if (availableCategories.length < StickerCategory.values.length && !widget.isLoading)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            color: Colors.grey[900],
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline,
+                    size: 16, color: Colors.orange),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '${StickerCategory.values.length - availableCategories.length} more sticker packs available with premium',
+                    style: const TextStyle(
+                      color: Colors.orange,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        
+        // Tab Bar
+        Container(
+          height: 50,
+          color: Colors.grey[900],
+          child: TabBar(
+            controller: _tabController,
+            isScrollable: true,
+            indicatorColor: Colors.blue,
+            labelColor: Colors.blue,
+            unselectedLabelColor: Colors.grey,
+            tabs: availableCategories.map((category) {
+              final isLocked = _isCategoryLocked(category);
+              return Tab(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _getCategoryIcon(category),
+                        size: 16,
+                        color: isLocked ? Colors.grey : Colors.blue,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        _getCategoryName(category),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: isLocked ? Colors.grey : Colors.white,
+                        ),
+                      ),
+                      if (isLocked) ...[
+                        const SizedBox(width: 4),
+                        const Icon(Icons.lock, size: 12, color: Colors.grey),
+                      ],
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        
+        // Tab Bar View
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: availableCategories.map((category) {
+              if (_isCategoryLocked(category)) {
+                return _buildLockedView(category);
+              }
+              return _buildStickerGrid(category);
+            }).toList(),
+          ),
+        ),
+      ],
+    );
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return Container(
       height: 500,
       decoration: const BoxDecoration(
@@ -445,6 +577,12 @@ class _StickerSelectorWidgetState extends State<StickerSelectorWidget>
           // Header
           Container(
             padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey[900],
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
+              ),
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -463,70 +601,10 @@ class _StickerSelectorWidgetState extends State<StickerSelectorWidget>
               ],
             ),
           ),
-          // Tab Bar
-          SizedBox(
-            height: 50,
-            child: TabBar(
-              controller: _tabController,
-              isScrollable: true,
-              indicatorColor: Colors.blue,
-              dividerColor: Colors.transparent,
-              tabs: availableCategories.map((category) {
-                return Tab(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          _getCategoryIcon(category),
-                          size: 16,
-                          color: Colors.blue,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          _getCategoryName(category),
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-          // Show locked categories info
-          if (availableCategories.length < StickerCategory.values.length)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                children: [
-                  const Icon(Icons.info_outline,
-                      size: 16, color: Colors.orange),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      '${StickerCategory.values.length - availableCategories.length} more sticker packs available with premium subscription',
-                      style: const TextStyle(
-                        color: Colors.orange,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          // Tab Bar View
+          
+          // Content area
           Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: availableCategories.map((category) {
-                return _buildStickerGrid(category);
-              }).toList(),
-            ),
+            child: widget.isLoading ? _buildLoadingView() : _buildContent(),
           ),
         ],
       ),

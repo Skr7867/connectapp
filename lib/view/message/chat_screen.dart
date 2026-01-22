@@ -7830,7 +7830,6 @@ class _ChatScreenState extends State<ChatScreen>
       _mentionsInMessage.clear();
     });
 
-    // ✅ ADD THIS: Update the chat list immediately after sending
     _updateChatListAfterSending(
         selectedChatId!, formattedContent, newMessage.timestamp);
 

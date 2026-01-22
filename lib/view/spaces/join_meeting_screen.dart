@@ -171,7 +171,7 @@ class JoinMeetingScreen extends StatelessWidget {
                             onPressed: () async {
                               final spaceId = space.sId;
                               String deepLink =
-                                  "https://connectapp.cc/space/$spaceId";
+                                  "https://connectapp.cc/spaces/$spaceId";
                               const playStoreLink =
                                   'https://play.google.com/store/apps/details?id=app.connectapp.com';
 

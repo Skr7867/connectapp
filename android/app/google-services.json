@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "35673142221-0vq8iu9dihmk556msdh0ipta463k08qn.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "app.connectapp.com",
+            "certificate_hash": "5b0009460b342f79c64091b4609fe79fd734f6ca"
+          }
+        },
+        {
           "client_id": "35673142221-j32mnq85espjjt36o2egrms9o6kve84c.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

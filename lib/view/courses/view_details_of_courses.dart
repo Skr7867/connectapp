@@ -72,7 +72,7 @@ class ViewDetailsOfCourses extends StatelessWidget {
 
                           try {
                             final deepLink =
-                                'https://connectapp.cc/course/$courseId';
+                                'https://connectapp.cc/course-details/$courseId';
 
                             const playStoreLink =
                                 'https://play.google.com/store/apps/details?id=app.connectapp.com';

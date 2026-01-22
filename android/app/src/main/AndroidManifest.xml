@@ -44,7 +44,7 @@
               <action android:name="android.intent.action.VIEW" />
               <category android:name="android.intent.category.DEFAULT" />
               <category android:name="android.intent.category.BROWSABLE" />
-              <data android:scheme="https" android:host="connectapp.cc" android:pathPrefix="/clip" />
+              <data android:scheme="https" android:host="connectapp.cc" android:pathPrefix="/clips" />
             </intent-filter>
 
 <!-- SPACE -->
@@ -52,7 +52,7 @@
             <action android:name="android.intent.action.VIEW" />
             <category android:name="android.intent.category.DEFAULT" />
             <category android:name="android.intent.category.BROWSABLE" />
-            <data android:scheme="https" android:host="connectapp.cc" android:pathPrefix="/space" />
+            <data android:scheme="https" android:host="connectapp.cc" android:pathPrefix="/spaces" />
             </intent-filter>
 
 <!-- COURSE -->
@@ -60,7 +60,7 @@
              <action android:name="android.intent.action.VIEW" />
              <category android:name="android.intent.category.DEFAULT" />
              <category android:name="android.intent.category.BROWSABLE" />
-             <data android:scheme="https" android:host="connectapp.cc" android:pathPrefix="/course" />
+             <data android:scheme="https" android:host="connectapp.cc" android:pathPrefix="/course-details" />
              </intent-filter>
 
 <!-- REF -->

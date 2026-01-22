@@ -66,9 +66,7 @@ class _TopLearnerWidgetState extends State<TopLearnerWidget> {
             } else if (status == Status.ERROR) {
               return Center(
                 child: Text(
-                  userLeaderboardData.error.value.isNotEmpty
-                      ? userLeaderboardData.error.value
-                      : 'Unknown Error',
+                  'Slow Internet Connection',
                   style: TextStyle(
                     color: Colors.red,
                     fontFamily: AppFonts.opensansRegular,

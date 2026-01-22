@@ -1215,7 +1215,7 @@ class _ReelItemState extends State<ReelItem>
   }
 
   String _generateDeepLink(String clipId) {
-    return 'https://connectapp.cc/clip/$clipId';
+    return 'https://connectapp.cc/clips/$clipId';
   }
 
   Widget _buildShareOption({

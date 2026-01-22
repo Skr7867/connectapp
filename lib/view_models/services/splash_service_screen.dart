@@ -55,20 +55,20 @@ class SplashServices {
       if (uri.scheme == 'https' || uri.scheme == 'http') {
         if (uri.pathSegments.isNotEmpty) {
           final first = uri.pathSegments[0];
-          if (first == 'course' && uri.pathSegments.length > 1) {
+          if (first == 'course-details' && uri.pathSegments.length > 1) {
             final courseId = uri.pathSegments[1];
             log('Navigating to course details: $courseId');
             isDeepLinkHandled = true;
             Get.offAllNamed(RouteName.viewDetailsOfCourses,
                 arguments: courseId);
             return;
-          } else if (first == 'clip' && uri.pathSegments.length > 1) {
+          } else if (first == 'clips' && uri.pathSegments.length > 1) {
             final clipId = uri.pathSegments[1];
             log(' Navigating to clip: $clipId');
             isDeepLinkHandled = true;
             Get.offAllNamed(RouteName.clipPlayScreen, arguments: clipId);
             return;
-          } else if (first == 'space' && uri.pathSegments.length > 1) {
+          } else if (first == 'spaces' && uri.pathSegments.length > 1) {
             final spaceId = uri.pathSegments[1];
             log('Navigating to space: $spaceId');
             isDeepLinkHandled = true;
@@ -83,17 +83,17 @@ class SplashServices {
       if (uri.scheme == 'connectapp') {
         final host = uri.host;
         final id = uri.queryParameters['id'];
-        if (host == 'course' && id != null) {
+        if (host == 'course-details' && id != null) {
           log(' Navigating (custom scheme) course: $id');
           isDeepLinkHandled = true;
           Get.offAllNamed(RouteName.viewDetailsOfCourses, arguments: id);
           return;
-        } else if (host == 'clip' && id != null) {
+        } else if (host == 'clips' && id != null) {
           log(' Navigating (custom scheme) clip: $id');
           isDeepLinkHandled = true;
           Get.offAllNamed(RouteName.clipPlayScreen, arguments: id);
           return;
-        } else if (host == 'space' && id != null) {
+        } else if (host == 'spaces' && id != null) {
           isDeepLinkHandled = true;
           Get.toNamed(RouteName.joinMeeting, arguments: id);
           return;
