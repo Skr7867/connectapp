@@ -176,16 +176,21 @@ class _CreatorHomeScreenState extends State<CreatorHomeScreen> {
                   return SizedBox(
                     height: 40,
                     width: 40,
-                    child: ClipOval(
-                      child: Image.asset(
-                        ImageAssets.defaultProfileImg,
-                        height: orientation == Orientation.portrait
-                            ? screenHeight * 0.1
-                            : screenHeight * 0.2,
-                        width: orientation == Orientation.portrait
-                            ? screenWidth * 0.2
-                            : screenWidth * 0.11,
-                        fit: BoxFit.cover,
+                    child: InkWell(
+                      onTap: () {
+                        Get.toNamed(RouteName.profileScreen);
+                      },
+                      child: ClipOval(
+                        child: Image.asset(
+                          ImageAssets.defaultProfileImg,
+                          height: orientation == Orientation.portrait
+                              ? screenHeight * 0.1
+                              : screenHeight * 0.2,
+                          width: orientation == Orientation.portrait
+                              ? screenWidth * 0.2
+                              : screenWidth * 0.11,
+                          fit: BoxFit.cover,
+                        ),
                       ),
                     ),
                   );
@@ -221,7 +226,7 @@ class _CreatorHomeScreenState extends State<CreatorHomeScreen> {
                                 fit: BoxFit.cover,
                                 width: 40,
                                 height: 40,
-                                // 👇 This part handles 401 or any other load failure
+                                //  This part handles 401 or any other load failure
                                 errorBuilder: (context, error, stackTrace) {
                                   return Image.asset(
                                     ImageAssets.defaultProfileImg,
@@ -233,12 +238,18 @@ class _CreatorHomeScreenState extends State<CreatorHomeScreen> {
                               ),
                             ),
                           )
-                        : Image.asset(
-                            color: Theme.of(context).textTheme.bodyLarge?.color,
-                            ImageAssets.profileIcon,
-                            fit: BoxFit.cover,
-                            width: 25,
-                            height: 25,
+                        : InkWell(
+                            onTap: () {
+                              Get.toNamed(RouteName.profileScreen);
+                            },
+                            child: Image.asset(
+                              color:
+                                  Theme.of(context).textTheme.bodyLarge?.color,
+                              ImageAssets.profileIcon,
+                              fit: BoxFit.cover,
+                              width: 25,
+                              height: 25,
+                            ),
                           ),
                   );
               }
@@ -251,7 +262,7 @@ class _CreatorHomeScreenState extends State<CreatorHomeScreen> {
                   switch (userData.rxRequestStatus.value) {
                     case Status.LOADING:
                       return Text(
-                        "Loading...",
+                        "Creator",
                         style: TextStyle(
                           fontSize: 14,
                           fontFamily: AppFonts.opensansRegular,
@@ -259,7 +270,7 @@ class _CreatorHomeScreenState extends State<CreatorHomeScreen> {
                         ),
                       );
                     case Status.ERROR:
-                      return const Text("User");
+                      return const Text("Creator");
                     case Status.COMPLETED:
                       return Text(
                         overflow: TextOverflow.ellipsis,

@@ -342,7 +342,7 @@ class _SpacesScreenState extends State<SpacesScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      space.creator?.fullName ?? "Avantika",
+                      space.creator?.fullName ?? "Host",
                       style: TextStyle(
                         color: Theme.of(context).textTheme.bodyLarge?.color,
                         fontFamily: AppFonts.opensansRegular,
@@ -433,21 +433,21 @@ class _SpacesScreenState extends State<SpacesScreen> {
                     fontSize: 12,
                   ),
                 ),
-                const Spacer(),
-                Icon(
-                  Icons.schedule,
-                  size: 14,
-                  color: Theme.of(context).textTheme.bodyLarge?.color,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '60',
-                  style: TextStyle(
-                    color: Theme.of(context).textTheme.bodyLarge?.color,
-                    fontFamily: AppFonts.opensansRegular,
-                    fontSize: 12,
-                  ),
-                ),
+                // const Spacer(),
+                // Icon(
+                //   Icons.schedule,
+                //   size: 14,
+                //   color: Theme.of(context).textTheme.bodyLarge?.color,
+                // ),
+                // const SizedBox(width: 4),
+                // Text(
+                //   '60',
+                //   style: TextStyle(
+                //     color: Theme.of(context).textTheme.bodyLarge?.color,
+                //     fontFamily: AppFonts.opensansRegular,
+                //     fontSize: 12,
+                //   ),
+                // ),
               ],
             ),
             const SizedBox(height: 16),

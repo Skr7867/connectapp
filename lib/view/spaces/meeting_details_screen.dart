@@ -226,18 +226,23 @@ class MeetingDetailsScreen extends StatelessWidget {
                             SizedBox(width: 5),
                             Text(
                               space.startTime != null
-                                  ? DateFormat('MMM dd, yyyy, hh:mm a')
-                                      .format(DateTime.parse(space.startTime!))
+                                  ? DateFormat('MMM dd, yyyy, hh:mm a').format(
+                                      DateTime.parse(space.startTime!)
+                                          .toLocal(),
+                                    )
                                   : 'N/A',
                               style: TextStyle(
-                                  fontFamily: AppFonts.opensansRegular,
-                                  fontSize: 13,
-                                  color: Theme.of(context)
-                                      .textTheme
-                                      .bodyLarge
-                                      ?.color),
+                                fontFamily: AppFonts.opensansRegular,
+                                fontSize: 13,
+                                color: Theme.of(context)
+                                    .textTheme
+                                    .bodyLarge
+                                    ?.color,
+                              ),
                             ),
-                            SizedBox(width: screenWidth * 0.23),
+
+                            // SizedBox(width: screenWidth * 0.23),
+                            Spacer(),
                             Icon(
                               size: 17,
                               Icons.people_alt_outlined,
