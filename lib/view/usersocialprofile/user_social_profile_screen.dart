@@ -93,47 +93,53 @@ class UserSocialProfileScreen extends StatelessWidget {
                             final isActive =
                                 profile?.subscription.status == "Active";
 
-                            return Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                gradient: isActive
-                                    ? LinearGradient(
-                                        colors: [
-                                          Colors.pinkAccent,
-                                          Colors.purpleAccent,
-                                          Colors.orangeAccent,
-                                        ],
-                                      )
-                                    : null,
-                                border: !isActive
-                                    ? Border.all(
-                                        color: AppColors.greyColor
-                                            .withOpacity(0.3),
-                                        width: 2)
-                                    : null,
-                              ),
+                            return InkWell(
+                              onTap: () {
+                                Get.toNamed(RouteName.fullProfileScreen,
+                                    arguments: avatar!.imageUrl);
+                              },
                               child: Container(
                                 padding: const EdgeInsets.all(4),
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color:
-                                      Theme.of(context).scaffoldBackgroundColor,
-                                ),
-                                child: ClipOval(
-                                  child: (avatar != null &&
-                                          avatar.imageUrl.isNotEmpty)
-                                      ? Image.network(
-                                          avatar.imageUrl,
-                                          height: 110,
-                                          width: 110,
-                                          fit: BoxFit.cover,
-                                          errorBuilder:
-                                              (context, error, stackTrace) {
-                                            return _buildDefaultAvatar();
-                                          },
+                                  gradient: isActive
+                                      ? LinearGradient(
+                                          colors: [
+                                            Colors.pinkAccent,
+                                            Colors.purpleAccent,
+                                            Colors.orangeAccent,
+                                          ],
                                         )
-                                      : _buildDefaultAvatar(),
+                                      : null,
+                                  border: !isActive
+                                      ? Border.all(
+                                          color: AppColors.greyColor
+                                              .withOpacity(0.3),
+                                          width: 2)
+                                      : null,
+                                ),
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Theme.of(context)
+                                        .scaffoldBackgroundColor,
+                                  ),
+                                  child: ClipOval(
+                                    child: (avatar != null &&
+                                            avatar.imageUrl.isNotEmpty)
+                                        ? Image.network(
+                                            avatar.imageUrl,
+                                            height: 110,
+                                            width: 110,
+                                            fit: BoxFit.cover,
+                                            errorBuilder:
+                                                (context, error, stackTrace) {
+                                              return _buildDefaultAvatar();
+                                            },
+                                          )
+                                        : _buildDefaultAvatar(),
+                                  ),
                                 ),
                               ),
                             );

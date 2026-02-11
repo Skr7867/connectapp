@@ -56,6 +56,7 @@ import 'package:connectapp/view/userSelfProfile/edit_profile_screen.dart';
 import 'package:connectapp/view/userSelfProfile/editemail/enter_password.dart';
 import 'package:connectapp/view/userSelfProfile/user_profile_screen.dart';
 import 'package:connectapp/view/userSelfProfile/widgets/clip_play_screen.dart';
+import 'package:connectapp/view/userSelfProfile/widgets/full_profile_screen.dart';
 import 'package:connectapp/view/wallet/wallet_screen.dart';
 import 'package:get/get.dart';
 import '../../view/CREATORPANEL/CourseManagement/course_management_screen.dart';
@@ -339,6 +340,10 @@ class AppRoutes {
         GetPage(
           name: RouteName.pendingFollowRequestScreen,
           page: () => NetworkBasePage(child: PendingFollowRequestScreen()),
+        ),
+        GetPage(
+          name: RouteName.fullProfileScreen,
+          page: () => NetworkBasePage(child: FullProfileScreen()),
         ),
 
         //************************************from here all routes for the creator panel********** */

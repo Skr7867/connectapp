@@ -67,6 +67,7 @@ class RouteName {
   static const reelsPage = '/ReelsPage';
   static const allFollowersScreen = '/AllFollowers';
   static const pendingFollowRequestScreen = '/PendingFollowRequestScreen';
+  static const fullProfileScreen = '/full_profile_screen';
 
   //*************************from here all routes of creator Panel***************************** */
 

@@ -112,7 +112,8 @@ class UserProfileContainerWidget extends StatelessWidget {
         children: [
           /// Avatar Image
           GestureDetector(
-            onTap: () => Get.toNamed(RouteName.profileScreen),
+            onTap: () =>
+                Get.toNamed(RouteName.fullProfileScreen, arguments: imageUrl),
             child: Container(
               width: avatarSize,
               height: avatarSize,
