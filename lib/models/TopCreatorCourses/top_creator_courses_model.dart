@@ -1,17 +1,20 @@
 class TopCreatorCoursesModel {
   bool? success;
+  String? message;
   Data? data;
 
-  TopCreatorCoursesModel({this.success, this.data});
+  TopCreatorCoursesModel({this.success, this.message, this.data});
 
   TopCreatorCoursesModel.fromJson(Map<String, dynamic> json) {
     success = json['success'];
+    message = json['message'];
     data = json['data'] != null ? Data.fromJson(json['data']) : null;
   }
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
     data['success'] = success;
+    data['message'] = message;
     if (this.data != null) {
       data['data'] = this.data!.toJson();
     }
@@ -87,8 +90,7 @@ class Creator {
     sId = json['_id'];
     fullName = json['fullName'];
     email = json['email'];
-    avatar =
-        json['avatar'] != null ? Avatar.fromJson(json['avatar']) : null;
+    avatar = json['avatar'] != null ? Avatar.fromJson(json['avatar']) : null;
     id = json['id'];
   }
 

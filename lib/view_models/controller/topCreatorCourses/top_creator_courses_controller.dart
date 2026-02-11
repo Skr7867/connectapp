@@ -26,12 +26,22 @@ class TopCreatorCoursesController extends GetxController {
       errorMessage.value = '';
 
       final token = await _userPrefs.getToken();
+
       if (token == null) {
         errorMessage.value = 'User token not found';
         return;
       }
 
       final response = await _repository.topCourses(token);
+
+      /// ✅ CHECK SUCCESS
+      if (response.success == false) {
+        errorMessage.value =
+            response.message ?? "No top creator courses available";
+        coursesData.value = null;
+        return;
+      }
+
       coursesData.value = response;
     } catch (e) {
       errorMessage.value = e.toString();

@@ -101,39 +101,64 @@ class NetworkApiServices extends BaseApiServices {
   }
 
   @override
-  Future<dynamic> patchApi(Map<String, dynamic> data, String url,
-      {String? token}) async {
+  Future<dynamic> patchApi(
+    dynamic data,
+    String url, {
+    String? token,
+    bool isFileUpload = false,
+  }) async {
     if (kDebugMode) {
       log("PATCH URL: $url");
       log("PATCH DATA: $data");
       if (token != null) log("PATCH TOKEN: $token");
+      if (isFileUpload) log("PATCH FILE UPLOAD: $isFileUpload");
     }
 
     dynamic responseJson;
-    try {
-      final response = await http
-          .patch(
-            Uri.parse(url),
-            headers: {
-              "Content-Type": "application/json",
-              if (token != null) "Authorization": "Bearer $token",
-            },
-            body: jsonEncode(data),
-          )
-          .timeout(const Duration(seconds: 10));
 
-      responseJson = returnResponse(response);
+    try {
+      if (isFileUpload) {
+        final request = http.MultipartRequest('PATCH', Uri.parse(url))
+          ..headers['Authorization'] = token != null ? 'Bearer $token' : '';
+
+        if (data is Map<String, dynamic>) {
+          for (var entry in data.entries) {
+            if (entry.value is http.MultipartFile) {
+              request.files.add(entry.value);
+            } else {
+              request.fields[entry.key] = entry.value.toString();
+            }
+          }
+        }
+
+        final streamedResponse =
+            await request.send().timeout(const Duration(seconds: 60));
+
+        final response = await http.Response.fromStream(streamedResponse);
+
+        responseJson = returnResponse(response);
+      } else {
+        final response = await http
+            .patch(
+              Uri.parse(url),
+              headers: {
+                "Content-Type": "application/json",
+                if (token != null) "Authorization": "Bearer $token",
+              },
+              body: data != null ? jsonEncode(data) : null,
+            )
+            .timeout(const Duration(seconds: 60));
+
+        responseJson = returnResponse(response);
+      }
     } on SocketException {
       throw InternetException('Please check your internet connection');
-    } on RequestTimeOut {
+    } on TimeoutException {
       throw RequestTimeOut('');
-    } on ServerException {
-      throw ServerException();
-    } on InvalidUrl {
-      throw InvalidUrl();
+    } catch (e) {
+      throw FetchDataException('Unexpected error: $e');
     }
 
-    if (kDebugMode) log("PATCH RESPONSE: $responseJson");
     return responseJson;
   }
 

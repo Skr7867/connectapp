@@ -9,6 +9,7 @@ import '../../../res/color/app_colors.dart';
 import '../../../res/fonts/app_fonts.dart';
 import '../../../view_models/CREATORPANEL/CreatorController/creator_controller.dart';
 import '../../../view_models/CREATORPANEL/CreatorController/switch_creator_controller.dart';
+import '../../../view_models/controller/setProfile/set_profile_controller.dart';
 
 class UserProfileContainerWidget extends StatelessWidget {
   const UserProfileContainerWidget({super.key});
@@ -103,68 +104,139 @@ class UserProfileContainerWidget extends StatelessWidget {
     final avatarSize = isPortrait ? size.width * 0.28 : size.height * 0.35;
 
     return Obx(() {
-      final imageUrl = userData.userList.value.avatar?.imageUrl;
       final isError = userData.rxRequestStatus.value == Status.ERROR;
+      // final imageUrl = userData.userProfile.value?.profilePic ?? "";
+      final imageUrl = userData.userList.value.avatar!.imageUrl;
 
-      return GestureDetector(
-        onTap: () => Get.toNamed(RouteName.profileScreen),
-        child: Container(
-          width: avatarSize,
-          height: avatarSize,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: LinearGradient(
-              colors: [
-                AppColors.blueColor.withOpacity(0.3),
-                Colors.tealAccent.withOpacity(0.3),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.blueColor.withOpacity(0.3),
-                blurRadius: 20,
-                spreadRadius: 2,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(4),
+      return Stack(
+        children: [
+          /// Avatar Image
+          GestureDetector(
+            onTap: () => Get.toNamed(RouteName.profileScreen),
             child: Container(
+              width: avatarSize,
+              height: avatarSize,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Theme.of(Get.context!).cardColor,
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.blueColor.withOpacity(0.3),
+                    Colors.tealAccent.withOpacity(0.3),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.blueColor.withOpacity(0.3),
+                    blurRadius: 20,
+                    spreadRadius: 2,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
               ),
-              child: ClipOval(
-                child: isError || imageUrl == null || imageUrl.isEmpty
-                    ? Image.asset(
-                        ImageAssets.defaultProfileImg,
-                        fit: BoxFit.cover,
-                      )
-                    : CachedNetworkImage(
-                        imageUrl: imageUrl,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => Center(
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              AppColors.blueColor,
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Theme.of(Get.context!).cardColor,
+                  ),
+                  child: ClipOval(
+                    child: isError || imageUrl == null || imageUrl.isEmpty
+                        ? Image.asset(
+                            ImageAssets.defaultProfileImg,
+                            fit: BoxFit.cover,
+                          )
+                        : CachedNetworkImage(
+                            imageUrl: imageUrl,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => Center(
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  AppColors.blueColor,
+                                ),
+                              ),
+                            ),
+                            errorWidget: (context, url, error) => Image.asset(
+                              ImageAssets.defaultProfileImg,
+                              fit: BoxFit.cover,
                             ),
                           ),
-                        ),
-                        errorWidget: (context, url, error) => Image.asset(
-                          ImageAssets.defaultProfileImg,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
+                  ),
+                ),
               ),
             ),
           ),
-        ),
+
+          /// ⭐ Edit Button Overlay
+          Positioned(
+            bottom: 5,
+            right: 5,
+            child: GestureDetector(
+              onTap: _showProfileTypeDialog,
+              child: Container(
+                padding: EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  color: AppColors.blueColor,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 6,
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.edit,
+                  color: Colors.white,
+                  size: 12,
+                ),
+              ),
+            ),
+          ),
+        ],
       );
     });
+  }
+
+  void _showProfileTypeDialog() {
+    final SetProfileController controller = Get.put(SetProfileController());
+
+    Get.dialog(
+      AlertDialog(
+        title: Text("Select Active Profile"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            /// Avatar
+            ListTile(
+              leading: Icon(Icons.person),
+              title: Text("Avatar"),
+              onTap: () async {
+                controller.selectProfile("avatar");
+
+                Get.back();
+                await controller.setActiveProfile();
+              },
+            ),
+
+            /// Profile Picture
+            ListTile(
+              leading: Icon(Icons.image),
+              title: Text("Profile Picture"),
+              onTap: () async {
+                controller.selectProfile("profilePicture");
+
+                Get.back();
+                await controller.setActiveProfile();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildUserName(UserProfileController userData, BuildContext context) {

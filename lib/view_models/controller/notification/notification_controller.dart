@@ -169,7 +169,6 @@ class NotificationController extends GetxController {
     );
 
     socket!.onConnect((_) {
-      log('Connected to socket server********8');
       connectionStatus.value = 'connected';
       isConnecting.value = false;
     });

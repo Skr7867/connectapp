@@ -1,6 +1,5 @@
 class ApiUrls {
-  static const String baseUrl =
-      'https://api.connectapp.cc'; // static const String baseUrl = 'https://connect-backend-qn87.onrender.com';
+  static const String baseUrl = 'https://api.connectapp.cc';
   static const String signupApi = '$baseUrl/connect/v1/api/user/register';
 
   static const String allAvatarApi =
@@ -158,6 +157,12 @@ class ApiUrls {
       '$baseUrl/connect/v1/api/social/get-pending-follow-requests';
   static const String acceptFollowRequestApi =
       '$baseUrl/connect/v1/api/social/respond-follow-request/';
+
+  static const String uploadProfilePicApi =
+      '$baseUrl/connect/v1/api/user/add-profile-pic';
+
+  static const String setProfileApi =
+      '$baseUrl/connect/v1/api/user/select-active-profile';
 
   //*************************************************from here all api for creator panel*******************************/
 

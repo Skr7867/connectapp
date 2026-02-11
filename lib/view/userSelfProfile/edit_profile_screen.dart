@@ -1,19 +1,53 @@
+import 'dart:io';
+
 import 'package:connectapp/res/routes/routes_name.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../res/color/app_colors.dart';
 import '../../res/custom_widgets/custome_appbar.dart';
 import '../../res/custom_widgets/responsive_padding.dart';
 import '../../res/fonts/app_fonts.dart';
 import '../../view_models/controller/editprofilecontroller/edit_profile_controller.dart';
+import '../../view_models/controller/uploadProfileController/upload_profile_controller.dart';
 import '../../view_models/controller/userName/user_name_controller.dart';
+import 'package:http/http.dart' as http;
 
 class EditProfileScreen extends StatelessWidget {
   EditProfileScreen({super.key});
   final EditProfileController _editProfileController =
       Get.put(EditProfileController());
   final _userName = Get.put(UserNameController());
+  final UploadProfileController _uploadController =
+      Get.put(UploadProfileController());
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> _pickAndUploadImage() async {
+    try {
+      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+
+      if (image == null) return;
+
+      File file = File(image.path);
+
+      /// Convert to Multipart
+      var multipartFile = await http.MultipartFile.fromPath(
+        'profilePic', // backend field name
+        file.path,
+      );
+
+      /// Call Upload API
+      await _uploadController.uploadProfile(
+        {
+          "profilePic": multipartFile,
+        },
+        file: file,
+      );
+    } catch (e) {
+      Get.snackbar("Error", e.toString());
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -73,12 +107,51 @@ class EditProfileScreen extends StatelessWidget {
                           ),
                         ],
                       ),
-                      child: Icon(
-                        Icons.person,
-                        size: 60,
-                        color: Colors.white70,
-                      ),
+                      child: Obx(() {
+                        /// ⭐ Local Picked Image (Priority 1)
+                        if (_uploadController.selectedImage.value != null) {
+                          return ClipOval(
+                            child: Image.file(
+                              _uploadController.selectedImage.value!,
+                              width: 120,
+                              height: 120,
+                              fit: BoxFit.cover,
+                            ),
+                          );
+                        }
+
+                        /// ⭐ Backend Image (Priority 2)
+                        final user = _editProfileController
+                            .userProfileController.userList.value;
+
+                        final imageUrl = user.avatar?.imageUrl ?? "";
+
+                        if (imageUrl.isNotEmpty) {
+                          return ClipOval(
+                            child: Image.network(
+                              imageUrl,
+                              width: 120,
+                              height: 120,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Icon(
+                                Icons.person,
+                                size: 60,
+                                color: Colors.white70,
+                              ),
+                            ),
+                          );
+                        }
+
+                        /// ⭐ Default Icon (Priority 3)
+                        return Icon(
+                          Icons.person,
+                          size: 60,
+                          color: Colors.white70,
+                        );
+                      }),
                     ),
+
+                    /// Camera Button
                     Positioned(
                       bottom: 0,
                       right: 0,
@@ -99,10 +172,13 @@ class EditProfileScreen extends StatelessWidget {
                             ),
                           ],
                         ),
-                        child: Icon(
-                          Icons.camera_alt,
-                          size: 20,
-                          color: Colors.white,
+                        child: InkWell(
+                          onTap: _pickAndUploadImage,
+                          child: Icon(
+                            Icons.camera_alt,
+                            size: 20,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),

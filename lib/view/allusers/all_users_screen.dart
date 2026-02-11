@@ -142,10 +142,8 @@ class AllUsersScreen extends StatelessWidget {
                       final user = usersToShow[index];
                       return InkWell(
                         onTap: () {
-                          Get.toNamed(
-                            RouteName.clipProfieScreen,
-                            arguments: user.id,
-                          );
+                          Get.toNamed(RouteName.clipProfieScreen,
+                              arguments: user.sId);
                         },
                         child: Container(
                           margin: const EdgeInsets.symmetric(

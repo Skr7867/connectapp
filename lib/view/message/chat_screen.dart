@@ -800,6 +800,7 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   // Enhanced scroll listener
+
   void _initScrollListener() {
     _scrollController.addListener(() {
       final position = _scrollController.position;
@@ -1295,33 +1296,47 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   void _sendStickerMessage(String stickerUrl) {
-    if (selectedChatId == null || currentUserId == null) return;
+    // Check multiple conditions before proceeding
+    if (!mounted ||
+        selectedChatId == null ||
+        currentUserId == null ||
+        ModalRoute.of(context)?.isCurrent == false) {
+      return;
+    }
 
     final chat = selectedChat;
-    final isGroup = chat?.isGroup ?? false;
+    if (chat == null) return;
+
+    final isGroup = chat.isGroup;
     String? receiverId;
 
+    // Get receiver ID safely
     if (isGroup) {
       receiverId = null;
     } else {
       if (pendingPrivateChatUserId != null) {
         receiverId = pendingPrivateChatUserId;
       } else {
-        final otherParticipant = chat?.participants?.firstWhere(
+        final otherParticipant = chat.participants?.firstWhereOrNull(
           (p) => p.id != currentUserId,
-          orElse: () => null as Participant,
         );
         receiverId = otherParticipant?.id;
       }
     }
 
-    final tempMessageId = 'temp-${DateTime.now().millisecondsSinceEpoch}';
+    // Validate we can send
+    if (!isGroup && (receiverId == null || receiverId.isEmpty)) {
+      if (mounted) {
+        _showSnackBar('Cannot send message: User not found');
+      }
+      return;
+    }
 
-    // Store reply information BEFORE clearing state
+    final tempMessageId = 'temp-${DateTime.now().millisecondsSinceEpoch}';
     final isReplying = showReplyPreview && replyingToMessage != null;
     final replyToMessageId = replyingToMessage?.id;
 
-    // Create new sticker message
+    // Create temporary message
     final newMessage = Message(
       id: tempMessageId,
       content: stickerUrl,
@@ -1333,65 +1348,107 @@ class _ChatScreenState extends State<ChatScreen>
       ),
       isRead: false,
       messageType: 'sticker',
-      replyTo: isReplying
+      replyTo: isReplying && replyingToMessage != null
           ? ReplyTo(
               id: replyingToMessage!.id,
               content: replyingToMessage!.content,
               sender: replyingToMessage!.sender,
             )
           : null,
+      reactions: [],
+      status: 'sending',
+      isEdited: false,
+      isForwarded: false,
+      originalSender: null,
+      fileInfo: null,
+      editedAt: null,
     );
 
-    // Optimistic UI update
-    setState(() {
-      messages[selectedChatId!] = [
-        ...(messages[selectedChatId!] ?? []),
-        newMessage
-      ];
-    });
+    // Add to messages with mounted check
+    if (mounted) {
+      setState(() {
+        messages[selectedChatId!] = [
+          ...(messages[selectedChatId!] ?? []),
+          newMessage
+        ];
+      });
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
       _scrollToBottom();
-    });
-    _cancelReply();
+      _cancelReply();
+    } else {
+      return; // Don't proceed if widget is disposed
+    }
+
+    // Send via socket
+    final socketData = {
+      'senderId': currentUserId!,
+      'receiverId': isGroup ? null : receiverId,
+      'groupId': isGroup ? selectedChatId : null,
+      'content': stickerUrl,
+      'messageType': 'sticker',
+      'mentions': [],
+      if (replyToMessageId != null) 'replyToMessageId': replyToMessageId,
+    };
+
+    // Log for debugging
+    log('📤 Sending sticker: $socketData');
+
     _socketService.sendMessage(
       senderId: currentUserId!,
       receiverId: isGroup ? null : receiverId,
       groupId: isGroup ? selectedChatId : null,
       content: stickerUrl,
-      mentions: [],
       messageType: 'sticker',
-      replyToMessageId:
-          isReplying ? replyToMessageId : null, // Use stored value
+      mentions: [],
+      replyToMessageId: replyToMessageId,
       callback: (response) {
-        if (response['success'] == true && response['messageId'] != null) {
-          // Replace temporary ID with real ID
-          setState(() {
-            final chatMessages = messages[selectedChatId!] ?? [];
-            final updatedMessages = chatMessages
-                .map((msg) => msg.id == tempMessageId
-                    ? Message(
-                        id: response['messageId']!,
-                        content: msg.content,
-                        timestamp: msg.timestamp,
-                        sender: msg.sender,
-                        isRead: msg.isRead,
-                        messageType: msg.messageType,
-                        replyTo: msg.replyTo,
-                        reactions: msg.reactions,
-                      )
-                    : msg)
-                .toList();
-            messages[selectedChatId!] = updatedMessages;
-          });
-        } else {
-          // Remove temporary message on failure
-          setState(() {
-            final chatMessages = messages[selectedChatId!] ?? [];
-            messages[selectedChatId!] =
-                chatMessages.where((msg) => msg.id != tempMessageId).toList();
-          });
-          _showSnackBar('Failed to send sticker');
+        // CRITICAL: Check mounted before any UI updates
+        if (!mounted) {
+          log('⚠️ Widget disposed, ignoring sticker callback');
+          return;
+        }
+
+        try {
+          if (response['success'] == true && response['messageId'] != null) {
+            setState(() {
+              final chatMessages = messages[selectedChatId!] ?? [];
+              final updatedMessages = chatMessages.map((msg) {
+                if (msg.id == tempMessageId) {
+                  return Message(
+                    id: response['messageId']!,
+                    content: msg.content,
+                    timestamp: msg.timestamp,
+                    sender: msg.sender,
+                    isRead: true,
+                    messageType: msg.messageType,
+                    replyTo: msg.replyTo,
+                    reactions: msg.reactions ?? [],
+                    status: 'delivered',
+                    isEdited: msg.isEdited,
+                    isForwarded: msg.isForwarded,
+                    originalSender: msg.originalSender,
+                    fileInfo: msg.fileInfo,
+                    editedAt: msg.editedAt,
+                  );
+                }
+                return msg;
+              }).toList();
+              messages[selectedChatId!] = updatedMessages;
+            });
+          } else {
+            // Remove temporary message on failure
+            setState(() {
+              final chatMessages = messages[selectedChatId!] ?? [];
+              messages[selectedChatId!] =
+                  chatMessages.where((msg) => msg.id != tempMessageId).toList();
+            });
+
+            if (mounted && response['message'] != null) {
+              _showSnackBar('Failed to send sticker: ${response['message']}');
+            }
+          }
+        } catch (e) {
+          log('Error in sticker callback: $e');
         }
       },
     );
@@ -1399,21 +1456,53 @@ class _ChatScreenState extends State<ChatScreen>
 
   // 3. Update the _showStickerSelector function
   void _showStickerSelector() {
+    // Prevent showing if already showing or context is invalid
+    if (!mounted || ModalRoute.of(context)?.isCurrent == false) {
+      return;
+    }
+
+    // Use a local variable to track if we've already handled selection
+    bool selectionHandled = false;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => StickerSelectorWidget(
-        onStickerSelected: (stickerUrl) {
-          // Send the selected sticker
-          _sendStickerMessage(stickerUrl);
-          Navigator.pop(context);
-        },
-        userProfile: currentUserProfile,
-        currentUserId: currentUserId,
-        currentUserName: currentUserName,
-      ),
-    );
+      isDismissible: true,
+      enableDrag: true,
+      builder: (context) {
+        return WillPopScope(
+          onWillPop: () async {
+            // Prevent pop if selection is being handled
+            return !selectionHandled;
+          },
+          child: StickerSelectorWidget(
+            onStickerSelected: (stickerUrl) {
+              if (selectionHandled || !mounted) return;
+
+              selectionHandled = true;
+
+              // Close the modal first
+              Navigator.of(context).pop();
+
+              // Then send the sticker after a small delay
+              Future.delayed(const Duration(milliseconds: 100), () {
+                if (mounted) {
+                  _sendStickerMessage(stickerUrl);
+                }
+              });
+            },
+            userProfile: currentUserProfile,
+            currentUserId: currentUserId,
+            currentUserName: currentUserName,
+          ),
+        );
+      },
+    ).then((_) {
+      // Modal was dismissed
+    }).catchError((error) {
+      log('Sticker selector error: $error');
+    });
   }
 
   Future<void> _starMessage(dynamic message) async {

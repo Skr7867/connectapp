@@ -1046,391 +1046,466 @@ class NewCourseDesignScreen extends StatelessWidget {
               ),
 
               SizedBox(height: 15),
-              // Creator's Choice Section
-              Container(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Creator's Choice",
-                      style: TextStyle(
-                          fontSize: 18,
-                          color: Theme.of(context).textTheme.bodyLarge?.color,
-                          fontWeight: FontWeight.w600,
-                          fontFamily: AppFonts.opensansRegular),
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      "Each week, discover handpicked courses from one of our top creators — fresh, personal, and inspiring.",
-                      style: TextStyle(
-                          fontSize: 14,
-                          color: AppColors.textColor,
-                          fontFamily: AppFonts.opensansRegular),
-                    ),
-                    SizedBox(height: 15),
-                    Container(
-                      padding: EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: AppColors.greyColor.withOpacity(0.4),
-                        ),
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.greyColor.withOpacity(0.2),
-                            spreadRadius: 2,
-                            blurRadius: 6,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Meet Your Creator",
-                            style: TextStyle(
-                                fontSize: 16,
-                                color: Theme.of(context)
-                                    .textTheme
-                                    .bodyLarge
-                                    ?.color,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: AppFonts.opensansRegular),
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              ClipOval(
-                                child: Container(
-                                  width: 50,
-                                  height: 50,
-                                  color: Colors.tealAccent,
-                                  child: topCreatorCoursesController
-                                              .coursesData
-                                              .value
-                                              ?.data
-                                              ?.creator
-                                              ?.avatar
-                                              ?.imageUrl !=
-                                          null
-                                      ? Image.network(
-                                          topCreatorCoursesController
-                                              .coursesData
-                                              .value!
-                                              .data!
-                                              .creator!
-                                              .avatar!
-                                              .imageUrl!,
-                                          fit: BoxFit.cover,
-                                          loadingBuilder: (BuildContext context,
-                                              Widget child,
-                                              ImageChunkEvent?
-                                                  loadingProgress) {
-                                            if (loadingProgress == null) {
-                                              return child; // Image loaded
-                                            }
-                                            return Center(
-                                              child: CircularProgressIndicator(
-                                                value: loadingProgress
-                                                            .expectedTotalBytes !=
-                                                        null
-                                                    ? loadingProgress
-                                                            .cumulativeBytesLoaded /
-                                                        (loadingProgress
-                                                                .expectedTotalBytes ??
-                                                            1)
-                                                    : null,
-                                                strokeWidth: 2,
-                                              ),
-                                            );
-                                          },
-                                          errorBuilder:
-                                              (context, error, stackTrace) {
-                                            return Icon(Icons.person,
-                                                color: Colors.purple[700]);
-                                          },
-                                        )
-                                      : Icon(Icons.person,
-                                          color: Colors.purple[700]), // No URL
+
+              Obx(() {
+                if (topCreatorCoursesController.isLoading.value) {
+                  return const SizedBox();
+                }
+
+                if (topCreatorCoursesController.errorMessage.isNotEmpty) {
+                  return const SizedBox();
+                }
+
+                final model = topCreatorCoursesController.coursesData.value;
+
+                if (model == null ||
+                    model.success == false ||
+                    model.data == null ||
+                    (model.data?.courses?.isEmpty ?? true)) {
+                  return const SizedBox(); // ✅ FULL SECTION HIDDEN
+                }
+
+                /// ✅ SHOW SECTION ONLY WHEN VALID DATA
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Creator's Choice",
+                              style: TextStyle(
+                                  fontSize: 18,
+                                  color: Theme.of(context)
+                                      .textTheme
+                                      .bodyLarge
+                                      ?.color,
+                                  fontWeight: FontWeight.w600,
+                                  fontFamily: AppFonts.opensansRegular),
+                            ),
+                            const SizedBox(height: 5),
+                            Text(
+                              "Each week, discover handpicked courses from one of our top creators — fresh, personal, and inspiring.",
+                              style: TextStyle(
+                                  fontSize: 14,
+                                  color: AppColors.textColor,
+                                  fontFamily: AppFonts.opensansRegular),
+                            ),
+                            SizedBox(height: 15),
+                            Container(
+                              padding: EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: AppColors.greyColor.withOpacity(0.4),
                                 ),
+                                borderRadius: BorderRadius.circular(8),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.greyColor.withOpacity(0.2),
+                                    spreadRadius: 2,
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      topCreatorCoursesController.coursesData
-                                              .value?.data?.creator?.fullName ??
-                                          'No name',
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "Meet Your Creator",
+                                    style: TextStyle(
+                                        fontSize: 16,
+                                        color: Theme.of(context)
+                                            .textTheme
+                                            .bodyLarge
+                                            ?.color,
+                                        fontWeight: FontWeight.bold,
+                                        fontFamily: AppFonts.opensansRegular),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Row(
+                                    children: [
+                                      ClipOval(
+                                        child: Container(
+                                          width: 50,
+                                          height: 50,
+                                          color: Colors.tealAccent,
+                                          child: topCreatorCoursesController
+                                                      .coursesData
+                                                      .value
+                                                      ?.data
+                                                      ?.creator
+                                                      ?.avatar
+                                                      ?.imageUrl !=
+                                                  null
+                                              ? Image.network(
+                                                  topCreatorCoursesController
+                                                      .coursesData
+                                                      .value!
+                                                      .data!
+                                                      .creator!
+                                                      .avatar!
+                                                      .imageUrl!,
+                                                  fit: BoxFit.cover,
+                                                  loadingBuilder:
+                                                      (BuildContext context,
+                                                          Widget child,
+                                                          ImageChunkEvent?
+                                                              loadingProgress) {
+                                                    if (loadingProgress ==
+                                                        null) {
+                                                      return child; // Image loaded
+                                                    }
+                                                    return Center(
+                                                      child:
+                                                          CircularProgressIndicator(
+                                                        value: loadingProgress
+                                                                    .expectedTotalBytes !=
+                                                                null
+                                                            ? loadingProgress
+                                                                    .cumulativeBytesLoaded /
+                                                                (loadingProgress
+                                                                        .expectedTotalBytes ??
+                                                                    1)
+                                                            : null,
+                                                        strokeWidth: 2,
+                                                      ),
+                                                    );
+                                                  },
+                                                  errorBuilder: (context, error,
+                                                      stackTrace) {
+                                                    return Icon(Icons.person,
+                                                        color:
+                                                            Colors.purple[700]);
+                                                  },
+                                                )
+                                              : Icon(Icons.person,
+                                                  color: Colors
+                                                      .purple[700]), // No URL
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              topCreatorCoursesController
+                                                      .coursesData
+                                                      .value
+                                                      ?.data
+                                                      ?.creator
+                                                      ?.fullName ??
+                                                  'No name',
+                                              style: TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontFamily:
+                                                      AppFonts.opensansRegular,
+                                                  color: Theme.of(context)
+                                                      .textTheme
+                                                      .bodyLarge
+                                                      ?.color),
+                                            ),
+                                            Text(
+                                              'Expert ● ${topCreatorCoursesController.coursesData.value?.data?.courseCount ?? 'Not Available'} Courses',
+                                              style: TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontFamily:
+                                                      AppFonts.opensansRegular,
+                                                  color: AppColors.textColor),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    "This creator made a big impact this week explore their top courses and learn from the best",
+                                    style: TextStyle(
+                                        fontSize: 14,
+                                        fontFamily: AppFonts.opensansRegular,
+                                        color: Theme.of(context)
+                                            .textTheme
+                                            .bodyLarge
+                                            ?.color,
+                                        height: 1.4),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 15),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Top Creator Courses',
+                                  style: TextStyle(
+                                      fontFamily: AppFonts.opensansRegular,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                                // Text(
+                                //   'See All',
+                                //   style: TextStyle(
+                                //       color: Colors.blue,
+                                //       fontWeight: FontWeight.bold,
+                                //       fontFamily: AppFonts.opensansRegular),
+                                // ),
+                              ],
+                            ),
+                            const SizedBox(height: 15),
+                            SizedBox(
+                              height: 340,
+                              child: Obx(() {
+                                // Show loader while fetching data
+                                if (topCreatorCoursesController
+                                        .isLoading.value &&
+                                    (topCreatorCoursesController.coursesData
+                                            .value?.data?.courses?.isEmpty ??
+                                        true)) {
+                                  return const Center(
+                                      child: CircularProgressIndicator());
+                                }
+
+                                // Show error message if any
+                                if (topCreatorCoursesController
+                                    .errorMessage.isNotEmpty) {
+                                  return Center(
+                                    child: Text(
+                                      'No top course found this week ',
                                       style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
                                           fontFamily: AppFonts.opensansRegular,
+                                          fontWeight: FontWeight.bold,
                                           color: Theme.of(context)
                                               .textTheme
                                               .bodyLarge
                                               ?.color),
                                     ),
-                                    Text(
-                                      'Expert ● ${topCreatorCoursesController.coursesData.value?.data?.courseCount ?? 'Not Available'} Courses',
-                                      style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.bold,
-                                          fontFamily: AppFonts.opensansRegular,
-                                          color: AppColors.textColor),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            "This creator made a big impact this week explore their top courses and learn from the best",
-                            style: TextStyle(
-                                fontSize: 14,
-                                fontFamily: AppFonts.opensansRegular,
-                                color: Theme.of(context)
-                                    .textTheme
-                                    .bodyLarge
-                                    ?.color,
-                                height: 1.4),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 15),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Top Creator Courses',
-                          style: TextStyle(
-                              fontFamily: AppFonts.opensansRegular,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold),
-                        ),
-                        // Text(
-                        //   'See All',
-                        //   style: TextStyle(
-                        //       color: Colors.blue,
-                        //       fontWeight: FontWeight.bold,
-                        //       fontFamily: AppFonts.opensansRegular),
-                        // ),
-                      ],
-                    ),
-                    const SizedBox(height: 15),
-                    SizedBox(
-                      height: 340,
-                      child: Obx(() {
-                        // Show loader while fetching data
-                        if (topCreatorCoursesController.isLoading.value &&
-                            (topCreatorCoursesController.coursesData.value?.data
-                                    ?.courses?.isEmpty ??
-                                true)) {
-                          return const Center(
-                              child: CircularProgressIndicator());
-                        }
-
-                        // Show error message if any
-                        if (topCreatorCoursesController
-                            .errorMessage.isNotEmpty) {
-                          return Center(
-                            child: Text(
-                              'No top course found this week ',
-                              style: TextStyle(
-                                  fontFamily: AppFonts.opensansRegular,
-                                  fontWeight: FontWeight.bold,
-                                  color: Theme.of(context)
-                                      .textTheme
-                                      .bodyLarge
-                                      ?.color),
-                            ),
-                          );
-                        }
-
-                        final courses = topCreatorCoursesController
-                                .coursesData.value?.data?.courses ??
-                            [];
-
-                        if (courses.isEmpty) {
-                          return Center(
-                              child: Text(
-                            'No courses available',
-                            style: TextStyle(
-                                fontFamily: AppFonts.opensansRegular,
-                                color: Theme.of(context)
-                                    .textTheme
-                                    .bodyLarge
-                                    ?.color),
-                          ));
-                        }
-
-                        // Display horizontal list of courses
-                        return ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: courses.length,
-                          itemBuilder: (context, index) {
-                            final course = courses[index];
-
-                            return Padding(
-                              padding: EdgeInsets.only(
-                                  right: index < courses.length - 1 ? 16 : 0),
-                              child: GestureDetector(
-                                onTap: () {
-                                  // Navigate to course details
-                                  Get.toNamed(
-                                    RouteName.viewDetailsOfCourses,
-                                    arguments: course.sId,
                                   );
-                                },
-                                child: Container(
-                                  width:
-                                      MediaQuery.of(context).size.width * 0.55,
-                                  decoration: BoxDecoration(
-                                    border: Border.all(
-                                        color: Colors.grey.withOpacity(0.4)),
-                                    borderRadius: BorderRadius.circular(12),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.grey.withOpacity(0.1),
-                                        spreadRadius: 1,
-                                        blurRadius: 4,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      // Thumbnail
-                                      ClipRRect(
-                                        borderRadius:
-                                            const BorderRadius.vertical(
-                                                top: Radius.circular(12)),
-                                        child: course.thumbnail != null
-                                            ? Image.network(
-                                                course.thumbnail!,
-                                                fit: BoxFit.cover,
-                                                height: 130,
-                                                width: double.infinity,
-                                                loadingBuilder: (context, child,
-                                                    loadingProgress) {
-                                                  if (loadingProgress == null) {
-                                                    return child;
-                                                  }
-                                                  return Container(
-                                                    height: 130,
-                                                    width: double.infinity,
-                                                    color: Colors.grey[300],
-                                                    child: const Center(
-                                                      child:
-                                                          CircularProgressIndicator(
-                                                              strokeWidth: 2),
-                                                    ),
-                                                  );
-                                                },
-                                                errorBuilder: (context, error,
-                                                    stackTrace) {
-                                                  return Container(
-                                                    height: 130,
-                                                    width: double.infinity,
-                                                    color: Colors.grey[300],
-                                                    child: const Icon(Icons
-                                                        .image_not_supported),
-                                                  );
-                                                },
-                                              )
-                                            : Container(
-                                                height: 130,
-                                                width: double.infinity,
-                                                color: Colors.grey[300],
-                                                child: const Icon(
-                                                    Icons.image_not_supported),
+                                }
+
+                                final courses = topCreatorCoursesController
+                                        .coursesData.value?.data?.courses ??
+                                    [];
+
+                                if (courses.isEmpty) {
+                                  return Center(
+                                      child: Text(
+                                    'No courses available',
+                                    style: TextStyle(
+                                        fontFamily: AppFonts.opensansRegular,
+                                        color: Theme.of(context)
+                                            .textTheme
+                                            .bodyLarge
+                                            ?.color),
+                                  ));
+                                }
+
+                                // Display horizontal list of courses
+                                return ListView.builder(
+                                  scrollDirection: Axis.horizontal,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16),
+                                  itemCount: courses.length,
+                                  itemBuilder: (context, index) {
+                                    final course = courses[index];
+
+                                    return Padding(
+                                      padding: EdgeInsets.only(
+                                          right: index < courses.length - 1
+                                              ? 16
+                                              : 0),
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          // Navigate to course details
+                                          Get.toNamed(
+                                            RouteName.viewDetailsOfCourses,
+                                            arguments: course.sId,
+                                          );
+                                        },
+                                        child: Container(
+                                          width: MediaQuery.of(context)
+                                                  .size
+                                                  .width *
+                                              0.55,
+                                          decoration: BoxDecoration(
+                                            border: Border.all(
+                                                color: Colors.grey
+                                                    .withOpacity(0.4)),
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.grey
+                                                    .withOpacity(0.1),
+                                                spreadRadius: 1,
+                                                blurRadius: 4,
+                                                offset: const Offset(0, 2),
                                               ),
-                                      ),
-                                      // Course info
-                                      Expanded(
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(12.0),
+                                            ],
+                                          ),
                                           child: Column(
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
                                             children: [
-                                              Text(
-                                                course.title ?? 'No title',
-                                                style: TextStyle(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.bold,
-                                                    fontFamily: AppFonts
-                                                        .opensansRegular,
-                                                    color: Theme.of(context)
-                                                        .textTheme
-                                                        .bodyLarge
-                                                        ?.color),
-                                                maxLines: 2,
-                                                overflow: TextOverflow.ellipsis,
+                                              // Thumbnail
+                                              ClipRRect(
+                                                borderRadius: const BorderRadius
+                                                    .vertical(
+                                                    top: Radius.circular(12)),
+                                                child: course.thumbnail != null
+                                                    ? Image.network(
+                                                        course.thumbnail!,
+                                                        fit: BoxFit.cover,
+                                                        height: 130,
+                                                        width: double.infinity,
+                                                        loadingBuilder: (context,
+                                                            child,
+                                                            loadingProgress) {
+                                                          if (loadingProgress ==
+                                                              null) {
+                                                            return child;
+                                                          }
+                                                          return Container(
+                                                            height: 130,
+                                                            width:
+                                                                double.infinity,
+                                                            color: Colors
+                                                                .grey[300],
+                                                            child: const Center(
+                                                              child:
+                                                                  CircularProgressIndicator(
+                                                                      strokeWidth:
+                                                                          2),
+                                                            ),
+                                                          );
+                                                        },
+                                                        errorBuilder: (context,
+                                                            error, stackTrace) {
+                                                          return Container(
+                                                            height: 130,
+                                                            width:
+                                                                double.infinity,
+                                                            color: Colors
+                                                                .grey[300],
+                                                            child: const Icon(Icons
+                                                                .image_not_supported),
+                                                          );
+                                                        },
+                                                      )
+                                                    : Container(
+                                                        height: 130,
+                                                        width: double.infinity,
+                                                        color: Colors.grey[300],
+                                                        child: const Icon(Icons
+                                                            .image_not_supported),
+                                                      ),
                                               ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                course.description ??
-                                                    'No description',
-                                                style: TextStyle(
-                                                    fontSize: 12,
-                                                    fontFamily: AppFonts
-                                                        .opensansRegular,
-                                                    color: Theme.of(context)
-                                                        .textTheme
-                                                        .bodyLarge
-                                                        ?.color),
-                                                maxLines: 3,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                              const Spacer(),
-                                              Row(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment
-                                                        .spaceBetween,
-                                                children: [
-                                                  Text(
-                                                    course.coins == 0
-                                                        ? 'Free'
-                                                        : '${course.coins} Coins',
-                                                    style: const TextStyle(
-                                                      fontSize: 12,
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                      color: Colors.green,
-                                                      fontFamily: AppFonts
-                                                          .opensansRegular,
-                                                    ),
+                                              // Course info
+                                              Expanded(
+                                                child: Padding(
+                                                  padding: const EdgeInsets.all(
+                                                      12.0),
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      Text(
+                                                        course.title ??
+                                                            'No title',
+                                                        style: TextStyle(
+                                                            fontSize: 16,
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                            fontFamily: AppFonts
+                                                                .opensansRegular,
+                                                            color: Theme.of(
+                                                                    context)
+                                                                .textTheme
+                                                                .bodyLarge
+                                                                ?.color),
+                                                        maxLines: 2,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                      const SizedBox(height: 4),
+                                                      Text(
+                                                        course.description ??
+                                                            'No description',
+                                                        style: TextStyle(
+                                                            fontSize: 12,
+                                                            fontFamily: AppFonts
+                                                                .opensansRegular,
+                                                            color: Theme.of(
+                                                                    context)
+                                                                .textTheme
+                                                                .bodyLarge
+                                                                ?.color),
+                                                        maxLines: 3,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                      const Spacer(),
+                                                      Row(
+                                                        mainAxisAlignment:
+                                                            MainAxisAlignment
+                                                                .spaceBetween,
+                                                        children: [
+                                                          Text(
+                                                            course.coins == 0
+                                                                ? 'Free'
+                                                                : '${course.coins} Coins',
+                                                            style:
+                                                                const TextStyle(
+                                                              fontSize: 12,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600,
+                                                              color:
+                                                                  Colors.green,
+                                                              fontFamily: AppFonts
+                                                                  .opensansRegular,
+                                                            ),
+                                                          ),
+                                                          Icon(
+                                                              Icons
+                                                                  .arrow_forward_ios,
+                                                              size: 16,
+                                                              color: Colors
+                                                                  .grey[600]),
+                                                        ],
+                                                      ),
+                                                    ],
                                                   ),
-                                                  Icon(Icons.arrow_forward_ios,
-                                                      size: 16,
-                                                      color: Colors.grey[600]),
-                                                ],
+                                                ),
                                               ),
                                             ],
                                           ),
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        );
-                      }),
-                    )
-                  ],
-                ),
-              ),
+                                    );
+                                  },
+                                );
+                              }),
+                            )
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+
+              // Creator's Choice Section
 
               const SizedBox(height: 32),
 
